@@ -12,9 +12,16 @@
                 <h2 class="text-4xl font-black text-white italic tracking-tighter uppercase mb-1">Central de Administração</h2>
                 <p class="text-indigo-400 text-xs font-black tracking-widest uppercase italic leading-none">Controle Total do Ecossistema INTALOG</p>
             </div>
-            <a href="{% url 'dashboard' %}" class="bg-white/10 hover:bg-white/20 p-4 rounded-2xl text-white transition-all active:scale-95 group shrink-0">
-                <i data-lucide="x" class="w-6 h-6 group-hover:rotate-90 transition-transform"></i>
-            </a>
+            <div class="flex items-center gap-3">
+                {% if user.is_superuser %}
+                <a href="/admin/" target="_blank" class="bg-white/5 hover:bg-red-500/20 p-4 rounded-2xl text-white/50 hover:text-red-400 transition-all active:scale-95 group shrink-0 border border-white/5 hover:border-red-500/30" title="Django Admin Nativo">
+                    <i data-lucide="settings" class="w-6 h-6 group-hover:rotate-90 transition-transform duration-500"></i>
+                </a>
+                {% endif %}
+                <a href="{% url 'dashboard' %}" class="bg-white/10 hover:bg-white/20 p-4 rounded-2xl text-white transition-all active:scale-95 group shrink-0">
+                    <i data-lucide="x" class="w-6 h-6 group-hover:rotate-90 transition-transform"></i>
+                </a>
+            </div>
         </div>
     </div>
 
@@ -85,21 +92,6 @@
         {% endfor %}
     </div>
     {% endif %}
-
-    <!-- Ferramentas Rápidas e Admin -->
-    <div class="grid grid-cols-1 gap-4">
-        <a 
-            href="/admin/" 
-            target="_blank" 
-            class="flex items-center justify-between w-full bg-red-600 hover:bg-red-700 border border-red-500 shadow-xl shadow-red-200 p-6 rounded-3xl group transition-all"
-        >
-            <div>
-                <span class="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none block mb-1">Acesso Avançado</span>
-                <span class="text-lg font-black text-white uppercase tracking-tighter italic">Django Admin (Nativo)</span>
-            </div>
-            <i data-lucide="settings" class="text-white w-8 h-8 group-hover:rotate-90 transition-transform duration-500"></i>
-        </a>
-    </div>
 
     <!-- Container Principal (Alertas e Usuários) -->
     <div class="space-y-8">
