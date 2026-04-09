@@ -38,4 +38,6 @@ Thumbs.db
 
 # Project Docs/Temp
 ARQUIVOS AUXILIARES/
+*.bat
+
 
