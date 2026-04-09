@@ -123,7 +123,7 @@ def _send_forklift_anomaly_email(instance, request=None):
 def _send_schedule_alerts(schedule, request=None):
     """Send Email and WhatsApp alerts for new maintenance schedules"""
     # 1. Email Alerts
-    emails = list(AlertEmail.objects.filter(category='MANUTENCAO').values_list('email', flat=True))
+    emails = list(AlertEmail.objects.filter(category='AGENDA').values_list('email', flat=True))
     if emails:
         subject = f"🛠️ AGENDAMENTO: MANUTENÇÃO - {schedule.veiculo.placa}"
         site_url = request.build_absolute_uri('/')[:-1] if request else 'http://localhost:8001'
@@ -615,6 +615,7 @@ def system_admin_view(request):
     context = {
         'emails_portaria': AlertEmail.objects.filter(category='PORTARIA').order_by('email'),
         'emails_manutencao': AlertEmail.objects.filter(category='MANUTENCAO').order_by('email'),
+        'emails_agenda': AlertEmail.objects.filter(category='AGENDA').order_by('email'),
         'whatsapps': AlertWhatsApp.objects.all().order_by('nome'),
         'users': User.objects.all().select_related('profile').order_by('-date_joined')[:15],
     }
@@ -766,7 +767,7 @@ def _send_status_update_alerts(schedule, request):
     """Helper to send alerts when status changes to final states"""
     # Logic for Email (only for CONCLUIDO/CANCELADO)
     if schedule.status in ['CONCLUIDO', 'CANCELADO']:
-        emails = AlertEmail.objects.filter(category='MANUTENCAO').values_list('email', flat=True)
+        emails = AlertEmail.objects.filter(category='AGENDA').values_list('email', flat=True)
         if emails:
             subject = f"ATUALIZAÇÃO DE MANUTENÇÃO: {schedule.veiculo.placa} - {schedule.get_status_display().upper()}"
             site_url = request.build_absolute_uri('/')[:-1]
