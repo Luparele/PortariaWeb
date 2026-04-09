@@ -11,11 +11,34 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
 import json
+import requests
 from django.core.serializers.json import DjangoJSONEncoder
-from .models import Checklist, Profile, AlertEmail, Condutor, Veiculo, MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, MaintenanceSchedule, AlertWhatsApp, MaintenanceStatusLog
+from .models import Checklist, Profile, AlertEmail, Condutor, Veiculo, MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, MaintenanceSchedule, AlertTelegram, MaintenanceStatusLog
 from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS, PORTARIA_ITEMS, FORKLIFT_ITEMS
 
 # --- HELPER FUNCTIONS ---
+
+def _send_telegram_message(message):
+    """Helper to send a message to all active Telegram contacts"""
+    token = getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
+    if not token or token == 'YOUR_BOT_TOKEN_HERE':
+        print("TELEGRAM_BOT_TOKEN não configurado.")
+        return
+
+    contacts = AlertTelegram.objects.filter(ativo=True)
+    for contact in contacts:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {
+            'chat_id': contact.chat_id,
+            'text': message,
+            'parse_mode': 'Markdown'
+        }
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code != 200:
+                print(f"Erro Telegram ({contact.nome}): {response.text}")
+        except Exception as e:
+            print(f"Erro ao conectar com Telegram: {e}")
 
 def _send_portaria_anomaly_email(checklist, request=None):
     """Standalone function to send Portaria anomaly alerts (replaces legacy ViewSet method)"""
@@ -138,12 +161,14 @@ def _send_schedule_alerts(schedule, request=None):
             send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, emails, html_message=html_message, fail_silently=False)
         except Exception: pass
 
-    # 2. WhatsApp Alerts (Simulation/Placeholder for API)
-    whatsapp_contacts = AlertWhatsApp.objects.filter(ativo=True)
-    for contact in whatsapp_contacts:
-        # Mocking the WhatsApp API call
-        # In a real scenario: requests.post(GATEWAY_URL, json={'to': contact.numero_completo, 'body': message})
-        print(f"DEBUG: Simulating WhatsApp to {contact.numero_completo}: Agendamento {schedule.veiculo.placa} para {schedule.data_paralizacao}")
+    # 2. Telegram Alerts
+    msg = f"🛠️ *NOVO AGENDAMENTO DE MANUTENÇÃO*\n\n"
+    msg += f"Placa: {schedule.veiculo.placa}\n"
+    msg += f"Início: {schedule.data_paralizacao.strftime('%d/%m/%Y %H:%M')}\n"
+    msg += f"Previsão: {schedule.data_previsao_liberacao.strftime('%d/%m/%Y %H:%M')}\n"
+    msg += f"Descrição: {schedule.descricao}"
+    
+    _send_telegram_message(msg)
 
 # --- DASHBOARD SERIALIZATION HELPERS ---
 
@@ -533,18 +558,17 @@ def system_admin_view(request):
             AlertEmail.objects.filter(id=email_id).delete()
             messages.success(request, 'E-mail removido da lista de alertas.')
             
-        elif action == 'add_whatsapp':
+        elif action == 'add_telegram':
             nome = request.POST.get('nome', '').strip().upper()
-            ddd = request.POST.get('ddd', '').strip()
-            numero = request.POST.get('numero', '').strip()
-            if nome and ddd and numero:
-                AlertWhatsApp.objects.create(nome=nome, ddd=ddd, numero=numero)
-                messages.success(request, f'Contato {nome} ({ddd}{numero}) adicionado aos alertas WhatsApp.')
+            chat_id = request.POST.get('chat_id', '').strip()
+            if nome and chat_id:
+                AlertTelegram.objects.create(nome=nome, chat_id=chat_id)
+                messages.success(request, f'Contato Telegram {nome} (ID: {chat_id}) adicionado.')
             
-        elif action == 'delete_whatsapp':
-            whatsapp_id = request.POST.get('id')
-            AlertWhatsApp.objects.filter(id=whatsapp_id).delete()
-            messages.success(request, 'Contato WhatsApp removido.')
+        elif action == 'delete_telegram':
+            telegram_id = request.POST.get('id')
+            AlertTelegram.objects.filter(id=telegram_id).delete()
+            messages.success(request, 'Contato Telegram removido.')
 
         elif action == 'create_user':
             import secrets
@@ -616,7 +640,7 @@ def system_admin_view(request):
         'emails_portaria': AlertEmail.objects.filter(category='PORTARIA').order_by('email'),
         'emails_manutencao': AlertEmail.objects.filter(category='MANUTENCAO').order_by('email'),
         'emails_agenda': AlertEmail.objects.filter(category='AGENDA').order_by('email'),
-        'whatsapps': AlertWhatsApp.objects.all().order_by('nome'),
+        'telegrams': AlertTelegram.objects.all().order_by('nome'),
         'users': User.objects.all().select_related('profile').order_by('-date_joined')[:15],
     }
     return render(request, 'system_admin.html', context)
@@ -791,23 +815,16 @@ def _send_status_update_alerts(schedule, request):
             except Exception as e:
                 print(f"Error sending status email: {e}")
 
-        # WhatsApp Logic Simulator
-        contacts = AlertWhatsApp.objects.filter(ativo=True)
-        for contact in contacts:
-            msg = f"*ATUALIZAÇÃO DE MANUTENÇÃO*\n\n"
-            msg += f"Veículo: {schedule.veiculo.placa}\n"
-            msg += f"Situação: {schedule.get_status_display().upper()}\n"
-            msg += f"Descrição: {schedule.descricao}\n\n"
-            if schedule.status == 'CONCLUIDO':
-                msg += "✅ Veículo LIBERADO para escala.\n"
-                msg += "💡 *Aconselhamos a realização de um checklist completo do veículo* para garantir a segurança operacional."
-            
-            # Safe print for Windows console simulation
-            try:
-                print(f"SIMULANDO WHATSAPP PARA {contact.numero_completo}: {msg}")
-            except UnicodeEncodeError:
-                safe_msg = msg.encode('ascii', 'replace').decode('ascii')
-                print(f"SIMULANDO WHATSAPP PARA {contact.numero_completo} (ASCII-Safe): {safe_msg}")
+        # Telegram Logic
+        msg = f"🔔 *ATUALIZAÇÃO DE MANUTENÇÃO*\n\n"
+        msg += f"Veículo: {schedule.veiculo.placa}\n"
+        msg += f"Situação: {schedule.get_status_display().upper()}\n"
+        msg += f"Descrição: {schedule.descricao}\n\n"
+        if schedule.status == 'CONCLUIDO':
+            msg += "✅ *Veículo LIBERADO para escala.*\n"
+            msg += "💡 Aconselhamos a realização de um checklist completo."
+        
+        _send_telegram_message(msg)
 
 @login_required
 def schedule_update_status_view(request, pk):

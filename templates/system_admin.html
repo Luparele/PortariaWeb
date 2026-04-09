@@ -236,47 +236,46 @@
                     </div>
                 </div>
 
-                <!-- NOTIFICAÇÕES WHATSAPP -->
+                <!-- NOTIFICAÇÕES TELEGRAM -->
                 <div class="p-8 pt-0 border-t border-slate-50">
-                    <div class="bg-emerald-50 rounded-3xl p-6 mt-8">
+                    <div class="bg-blue-50 rounded-3xl p-6 mt-8">
                         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
                             <div>
-                                <h3 class="text-xl font-black text-emerald-900 uppercase tracking-tighter flex items-center gap-2">
-                                    <i data-lucide="message-circle" class="text-emerald-500"></i>
-                                    Notificações WhatsApp
+                                <h3 class="text-xl font-black text-blue-900 uppercase tracking-tighter flex items-center gap-2">
+                                    <i data-lucide="send" class="text-blue-500"></i>
+                                    Notificações Telegram
                                 </h3>
-                                <p class="text-emerald-600/60 text-[10px] font-black uppercase tracking-widest leading-none">Agendamentos em Tempo Real</p>
+                                <p class="text-blue-600/60 text-[10px] font-black uppercase tracking-widest leading-none">Alertas Gratuitos e Instantâneos</p>
                             </div>
 
                             <form method="post" class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                                 {% csrf_token %}
-                                <input type="hidden" name="action" value="add_whatsapp">
-                                <div class="flex flex-col sm:flex-row gap-2 bg-white p-1 rounded-2xl border border-emerald-100">
+                                <input type="hidden" name="action" value="add_telegram">
+                                <div class="flex flex-col sm:flex-row gap-2 bg-white p-1 rounded-2xl border border-blue-100">
                                     <input type="text" name="nome" placeholder="NOME" class="bg-transparent border-0 px-4 py-3 text-xs font-bold focus:ring-0 outline-none uppercase w-full sm:w-32" required />
-                                    <input type="text" name="ddd" placeholder="DDD" maxlength="2" class="bg-transparent border-0 px-4 py-3 text-xs font-bold focus:ring-0 outline-none w-full sm:w-16" required />
-                                    <input type="text" name="numero" placeholder="NÚMERO" maxlength="9" class="bg-transparent border-0 px-4 py-3 text-xs font-bold focus:ring-0 outline-none w-full sm:w-40" required />
+                                    <input type="text" name="chat_id" placeholder="ID DO CHAT (EX: 12345678)" class="bg-transparent border-0 px-4 py-3 text-xs font-bold focus:ring-0 outline-none w-full sm:w-56" required />
                                 </div>
-                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95">
                                     <i data-lucide="plus" class="w-5 h-5"></i>
                                 </button>
                             </form>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {% for item in whatsapps %}
-                            <div class="flex items-center justify-between p-4 bg-white border border-emerald-100 rounded-2xl group hover:shadow-md transition-all">
+                            {% for item in telegrams %}
+                            <div class="flex items-center justify-between p-4 bg-white border border-blue-100 rounded-2xl group hover:shadow-md transition-all">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+                                    <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
                                         <i data-lucide="user" class="w-5 h-5"></i>
                                     </div>
                                     <div>
                                         <p class="text-xs font-black text-slate-800 uppercase leading-none mb-1">{{ item.nome }}</p>
-                                        <p class="text-[10px] font-bold text-emerald-600">({{ item.ddd }}) {{ item.numero }}</p>
+                                        <p class="text-[10px] font-bold text-blue-600">ID: {{ item.chat_id }}</p>
                                     </div>
                                 </div>
                                 <form method="post" onsubmit="return confirm('Excluir este contato?');">
                                     {% csrf_token %}
-                                    <input type="hidden" name="action" value="delete_whatsapp">
+                                    <input type="hidden" name="action" value="delete_telegram">
                                     <input type="hidden" name="id" value="{{ item.id }}">
                                     <button type="submit" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -285,8 +284,8 @@
                             </div>
                             {% empty %}
                             <div class="col-span-full py-10 flex flex-col items-center justify-center opacity-30 italic">
-                                <i data-lucide="message-square-off" class="w-8 h-8 mb-2"></i>
-                                <span class="text-xs font-bold uppercase">Nenhum contato cadastrado</span>
+                                <i data-lucide="send-off" class="w-8 h-8 mb-2"></i>
+                                <span class="text-xs font-bold uppercase">Nenhum robô configurado</span>
                             </div>
                             {% endfor %}
                         </div>

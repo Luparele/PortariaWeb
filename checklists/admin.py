@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from .models import Checklist, Profile, Condutor, Veiculo, AlertEmail, MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, MaintenanceSchedule, AlertWhatsApp
+from .models import Checklist, Profile, Condutor, Veiculo, AlertEmail, MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, MaintenanceSchedule, AlertTelegram
 
 class ProfileInline(admin.StackedInline):
     model = Profile
@@ -65,8 +65,8 @@ class MaintenanceScheduleAdmin(admin.ModelAdmin):
     list_filter = ('status', 'data_paralizacao')
     search_fields = ('veiculo__placa', 'descricao')
 
-@admin.register(AlertWhatsApp)
-class AlertWhatsAppAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'ddd', 'numero', 'ativo', 'created_at')
+@admin.register(AlertTelegram)
+class AlertTelegramAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'chat_id', 'ativo', 'created_at')
     list_filter = ('ativo',)
-    search_fields = ('nome', 'numero')
+    search_fields = ('nome', 'chat_id')

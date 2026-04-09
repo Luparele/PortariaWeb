@@ -417,23 +417,18 @@ class MaintenanceSchedule(models.Model):
     def __str__(self):
         return f"Manutenção {self.veiculo.placa} - {self.data_paralizacao.strftime('%d/%m/%y')}"
 
-class AlertWhatsApp(models.Model):
+class AlertTelegram(models.Model):
     nome = models.CharField(max_length=100)
-    ddd = models.CharField(max_length=2)
-    numero = models.CharField(max_length=9)
+    chat_id = models.CharField(max_length=50, help_text="ID numérico do chat ou usuário no Telegram")
     ativo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = "Alerta de WhatsApp"
-        verbose_name_plural = "Alertas de WhatsApp"
+        verbose_name = "Alerta de Telegram"
+        verbose_name_plural = "Alertas de Telegram"
 
     def __str__(self):
-        return f"{self.nome} ({self.ddd}{self.numero})"
-
-    @property
-    def numero_completo(self):
-        return f"55{self.ddd}{self.numero}"
+        return f"{self.nome} (ID: {self.chat_id})"
 
 class MaintenanceStatusLog(models.Model):
     schedule = models.ForeignKey(MaintenanceSchedule, on_delete=models.CASCADE, related_name='logs')
