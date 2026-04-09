@@ -14,6 +14,7 @@ O projeto foi concebido com foco na **eficiência operacional** e no uso em camp
 - **Mobile-First & Responsivo**: Prioriza a utilização em tablets e smartphones, permitindo que controladores e mecânicos realizem inspeções diretamente ao lado dos veículos.
 - **Experiência PWA (Progressive Web App)**: O sistema é instalável como um aplicativo nativo e utiliza *Service Workers* para garantir uma navegação fluida.
 - **Assinatura Digital**: Implementação de captura de assinaturas diretamente na tela, garantindo a autenticidade das inspeções sem necessidade de papel.
+- **Relatório Fotográfico Integrado**: Captura de evidências visuais em tempo real com interface de câmera nativa.
 - **Feedback Visual Instantâneo**: Indicadores de anomalias (vermelho/verde) e cronômetros de execução em tempo real orientam o usuário durante o processo.
 
 ---
@@ -27,6 +28,7 @@ O projeto foi concebido com foco na **eficiência operacional** e no uso em camp
 ### Frontend
 - **HTML5 & Vanilla CSS**: Estrutura e estilização customizada focada em performance.
 - **JavaScript (ES6+)**: Lógica de interatividade, captura de assinaturas e gerenciamento de PWA.
+- **WebRTC API**: Interface de câmera nativa para dispositivos desktop e mobile.
 - **Bootstrap 5**: Framework base para responsividade e componentes UI consistentes.
 
 ### Banco de Dados & Serviços
@@ -63,6 +65,12 @@ O projeto foi concebido com foco na **eficiência operacional** e no uso em camp
     *   **Configuração Globais de E-mail (SMTP)**: Interface para cadastro de servidores Provedores (Outlook, Gmail, etc).
     *   **Integração Nativa Telegram**: Gestão de Tokens de Bot e links de convite com função de cópia rápida.
     *   **Gestão de Destinatários**: Controle granular de quem recebe alertas por tipo de evento (Agenda, Portaria, Manutenção).
+
+7.  **Relatório Fotográfico de Avarias**:
+    *   **Captura em Tempo Real**: Interface nativa "point-and-shoot" via WebRTC (funciona em Windows, Android e iOS).
+    *   **Download em Massa (ZIP)**: Compactação automática de todas as fotos de um checklist em um único arquivo.
+    *   **Anexo PDF Dinâmico**: Geração automática de uma "Página 2" no relatório de impressão com escalonamento inteligente de fotos.
+    *   **Ciclo de Vida Automático**: Deleção de fotos após resolução do problema ou expiração de 30 dias para otimização de armazenamento.
 
 ---
 
