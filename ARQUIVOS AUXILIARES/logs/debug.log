@@ -1,0 +1,122 @@
+
+DEBUG: Logout attempt for user: admin at 2026-03-27 12:22:34.410904
+
+DEBUG: Login attempt for username: 'TESTE' at 2026-03-27 12:22:36.973185
+DEBUG: Authentication successful for: TESTE
+
+DEBUG: Logout attempt for user: TESTE at 2026-03-27 12:22:44.160952
+
+DEBUG: Login attempt for username: 'admin' at 2026-03-27 12:22:53.384558
+DEBUG: Authentication successful for: admin
+
+DEBUG: Logout attempt for user: admin at 2026-03-27 12:23:20.675608
+
+DEBUG: Login attempt for username: 'TESTE' at 2026-03-27 12:23:27.857283
+DEBUG: Authentication successful for: TESTE
+
+DEBUG: Logout attempt for user: TESTE at 2026-03-27 12:52:27.205453
+
+DEBUG: Login attempt for username: 'admin' at 2026-03-27 12:52:31.683703
+DEBUG: Authentication successful for: admin
+
+DEBUG: Creating checklist at 2026-03-27 13:05:38.934125 by admin
+DEBUG: Data keys: ['placa_cavalo', 'nome_motorista', 'placa_carreta_01', 'placa_carreta_02', 'doc_carreta_entregue', 'tipo_equipamento', 'eletrica_condicoes', 'eletrica_seta', 'eletrica_re', 'eletrica_freio', 'eletrica_capas', 'eletrica_placa', 'mecanica_freios', 'mecanica_conexoes', 'mecanica_folga_quinta_roda', 'mecanica_suspensao', 'mecanica_freio_estacionario', 'mecanica_travas_conteiner', 'mecanica_tampas_equipamento', 'mecanica_tampas_estado', 'rodas_pneus_quantidade', 'rodas_pneus_reserva', 'rodas_pneus_estado', 'rodas_pneus_cortes_bolhas', 'anomalias', 'visto_responsavel_saida', 'visto_motorista_saida']
+DEBUG: Signature Responsible length: 0
+DEBUG: Signature Driver length: 0
+
+DEBUG: Creating checklist at 2026-03-27 13:45:10.080967 by admin
+DEBUG: Data keys: ['placa_cavalo', 'nome_motorista', 'placa_carreta_01', 'placa_carreta_02', 'doc_carreta_entregue', 'tipo_equipamento', 'eletrica_condicoes', 'eletrica_seta', 'eletrica_re', 'eletrica_freio', 'eletrica_capas', 'eletrica_placa', 'mecanica_freios', 'mecanica_conexoes', 'mecanica_folga_quinta_roda', 'mecanica_suspensao', 'mecanica_freio_estacionario', 'mecanica_travas_conteiner', 'mecanica_tampas_equipamento', 'mecanica_tampas_estado', 'rodas_pneus_quantidade', 'rodas_pneus_reserva', 'rodas_pneus_estado', 'rodas_pneus_cortes_bolhas', 'anomalias', 'visto_responsavel_saida', 'visto_motorista_saida']
+DEBUG: Signature Responsible length: 11598
+DEBUG: Signature Driver length: 11782
+
+DEBUG: Login attempt for username: 'ADMIN' at 2026-03-27 14:26:26.516435
+DEBUG: Authentication successful for: ADMIN
+
+DEBUG: Login attempt for username: 'ADMIN' at 2026-03-27 14:26:39.872950
+DEBUG: Authentication successful for: ADMIN
+
+DEBUG: Login attempt for username: 'ADMIN' at 2026-03-27 14:27:52.765177
+DEBUG: Authentication successful for: ADMIN
+DEBUG: Email de anomalia enviado para ['eduardo.luparele@gmail.com', '[REDACTED_EMAIL]'] em 2026-03-27 14:30:14.051077
+DEBUG: Email de anomalia enviado para ['eduardo.luparele@gmail.com', '[REDACTED_EMAIL]'] em 2026-03-27 14:33:50.687641
+
+DEBUG: Logout attempt for user: ADMIN at 2026-03-27 14:42:22.131343
+
+DEBUG: Login attempt for username: 'ADMIN' at 2026-03-27 14:43:12.369859
+DEBUG: Authentication successful for: ADMIN
+DEBUG: Email de anomalia enviado para ['eduardo.luparele@gmail.com', '[REDACTED_EMAIL]'] em 2026-03-27 14:45:13.350274
+DEBUG: Email de anomalia enviado para ['eduardo.luparele@gmail.com', '[REDACTED_EMAIL]'] em 2026-03-27 15:01:08.651168
+DEBUG: Email de anomalia enviado para ['[REDACTED_EMAIL]'] em 2026-03-27 15:26:46.516321
+
+DEBUG: Logout attempt for user: ADMIN at 2026-03-27 15:30:23.215731
+
+DEBUG: Login attempt for username: 'ADMIN' at 2026-03-27 15:34:03.413382
+DEBUG: Authentication successful for: ADMIN
+DEBUG: Email de anomalia enviado para ['[REDACTED_EMAIL]'] em 2026-03-27 15:37:46.779457
+
+DEBUG: Logout attempt for user: ADMIN at 2026-03-27 16:06:42.946927
+
+DEBUG: Login attempt for username: 'ADMIN' at 2026-03-27 16:06:52.176667
+DEBUG: Authentication successful for: ADMIN
+DEBUG: Email de anomalia enviado para ['[REDACTED_EMAIL]'] em 2026-03-27 16:11:45.242990
+
+DEBUG: Logout attempt for user: ADMIN at 2026-03-27 16:14:23.712854
+
+DEBUG: Login attempt for username: 'ADMIN' at 2026-03-30 09:28:09.870465
+DEBUG: Authentication successful for: ADMIN
+DEBUG: Email de anomalia enviado para ['[REDACTED_EMAIL]'] em 2026-03-30 10:13:14.626842
+
+DEBUG: Login attempt for username: 'ADMIN' at 2026-03-30 12:09:22.442398
+DEBUG: Authentication successful for: ADMIN
+
+DEBUG: Login attempt - User: 'ADMIN' at 2026-03-30 13:23:46.819074
+DEBUG: Login Success - User: ADMIN (ID: 1)
+
+DEBUG: Login attempt - User: 'ADMIN' at 2026-03-30 13:53:28.988461
+DEBUG: Login Success - User: ADMIN (ID: 1)
+DEBUG: Email de anomalia enviado para ['[REDACTED_EMAIL]'] em 2026-03-30 14:07:15.411179
+
+DEBUG: Logout attempt for user: ADMIN at 2026-03-30 14:58:55.654320
+
+DEBUG: Login attempt - User: 'ROSENDO.MARINHO' at 2026-03-30 14:59:39.611062
+DEBUG: Login Success - User: ROSENDO.MARINHO (ID: 6)
+
+DEBUG: Logout attempt for user: ROSENDO.MARINHO at 2026-03-30 15:01:11.916345
+
+DEBUG: Login attempt - User: 'ADMIN' at 2026-03-30 15:01:18.587056
+DEBUG: Login Failed - Invalid credentials for: ADMIN
+
+DEBUG: Login attempt - User: 'ADMIN' at 2026-03-30 15:01:24.820820
+DEBUG: Login Success - User: ADMIN (ID: 1)
+
+DEBUG: Logout attempt for user: ADMIN at 2026-03-30 15:01:33.329719
+
+DEBUG: Login attempt - User: 'ROSENDO.MARINHO' at 2026-03-30 15:36:03.427233
+DEBUG: Login Success - User: ROSENDO.MARINHO (ID: 6)
+
+DEBUG: Logout attempt for user: ROSENDO.MARINHO at 2026-03-30 15:44:15.462536
+
+DEBUG: Login attempt - User: 'ADMIN' at 2026-03-30 15:44:22.974366
+DEBUG: Login Success - User: ADMIN (ID: 1)
+DEBUG: Email de anomalia enviado para ['[REDACTED_EMAIL]'] em 2026-03-30 16:01:05.069127
+
+DEBUG: Logout attempt for user: ADMIN at 2026-03-30 16:34:06.951027
+
+DEBUG: Login attempt - User: 'MAIKON.JESUS' at 2026-03-30 16:34:13.164958
+DEBUG: Login Success - User: MAIKON.JESUS (ID: 7)
+
+DEBUG: Logout attempt for user: MAIKON.JESUS at 2026-03-30 16:41:34.171398
+
+DEBUG: Login attempt - User: 'ADMIN' at 2026-03-30 16:41:46.808490
+DEBUG: Login Success - User: ADMIN (ID: 1)
+
+DEBUG: Logout attempt for user: ADMIN at 2026-03-30 16:42:47.932591
+
+DEBUG: Login attempt - User: 'WALLACE.VALE' at 2026-03-30 16:42:55.872752
+DEBUG: Login Success - User: WALLACE.VALE (ID: 8)
+
+DEBUG: Login attempt - User: 'ADMIN' at 2026-04-01 10:35:57.637913
+DEBUG: Login Failed - Invalid credentials for: ADMIN
+
+DEBUG: Login attempt - User: 'ADMIN' at 2026-04-01 10:36:03.314996
+DEBUG: Login Success - User: ADMIN (ID: 1)

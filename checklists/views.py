@@ -1,0 +1,888 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.db.models import Count, Avg, Q
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
+from django.utils import timezone
+from datetime import datetime
+import json
+from django.core.serializers.json import DjangoJSONEncoder
+from .models import Checklist, Profile, AlertEmail, Condutor, Veiculo, MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, MaintenanceSchedule, AlertWhatsApp, MaintenanceStatusLog
+from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS, PORTARIA_ITEMS, FORKLIFT_ITEMS
+
+# --- HELPER FUNCTIONS ---
+
+def _send_portaria_anomaly_email(checklist, request=None):
+    """Standalone function to send Portaria anomaly alerts (replaces legacy ViewSet method)"""
+    emails = list(AlertEmail.objects.filter(category='PORTARIA').values_list('email', flat=True))
+    if not emails:
+        return
+
+    subject = f"⚠️ ALERTA DE ANOMALIA - Veículo {checklist.placa_cavalo.placa}"
+    
+    # Resolve items to find NCs (Nao Conforme)
+    items_nc = []
+    for item in PORTARIA_ITEMS:
+        val = getattr(checklist, item['id'], 'NA')
+        if val == 'NAO':
+            items_nc.append(item)
+
+    # Build context for HTML email
+    site_url = request.build_absolute_uri('/')[:-1] if request else 'http://localhost:8001'
+    context = {
+        'checklist': checklist,
+        'items_nc': items_nc,
+        'site_url': site_url,
+        'now': datetime.now()
+    }
+    
+    html_message = render_to_string('emails/portaria_anomaly_email.html', context)
+    plain_message = strip_tags(html_message)
+    
+    try:
+        send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, emails, html_message=html_message, fail_silently=False)
+    except Exception as e:
+        pass # Log error if needed
+
+def _send_maintenance_alert(instance, veiculo_tipo, request=None):
+    """Standalone function to send Maintenance alerts"""
+    emails = list(AlertEmail.objects.filter(category='MANUTENCAO').values_list('email', flat=True))
+    if not emails: return
+    
+    subject = f"🛠️ MANUTENÇÃO: ANOMALIA DETECTADA - {veiculo_tipo} {instance.veiculo.placa}"
+    
+    from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS
+    items_def = TRUCK_MAINTENANCE_ITEMS if veiculo_tipo == "CAMINHÃO" else TRAILER_MAINTENANCE_ITEMS
+    items_nc = []
+    for item in items_def:
+        val = getattr(instance, item['id'], 'NA')
+        if val == 'NAO':
+            items_nc.append(item)
+
+    site_url = request.build_absolute_uri('/')[:-1] if request else 'http://localhost:8001'
+    context = {
+        'instance': instance,
+        'veiculo_tipo': veiculo_tipo,
+        'items_nc': items_nc,
+        'site_url': site_url,
+        'm_type': 'truck' if veiculo_tipo == "CAMINHÃO" else 'trailer',
+        'now': datetime.now()
+    }
+    
+    html_message = render_to_string('emails/maintenance_anomaly_email.html', context)
+    plain_message = strip_tags(html_message)
+
+    try:
+        send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, emails, html_message=html_message, fail_silently=False)
+    except Exception as e:
+        pass
+
+def _send_forklift_anomaly_email(instance, request=None):
+    """Standalone function to send Forklift anomaly alerts"""
+    emails = list(AlertEmail.objects.filter(category='MANUTENCAO').values_list('email', flat=True))
+    if not emails: return
+    
+    subject = f"🚜 EMPILHADEIRA: ANOMALIA DETECTADA - {instance.get_tipo_equipamento_display()}"
+    
+    items_nc = []
+    for item in FORKLIFT_ITEMS:
+        val = getattr(instance, item['id'], 'NA')
+        if val == 'NAO':
+            items_nc.append(item)
+
+    site_url = request.build_absolute_uri('/')[:-1] if request else 'http://localhost:8001'
+    
+    # Format duration for email
+    duration_str = "-"
+    if instance.tempo_execucao:
+        minutes = instance.tempo_execucao // 60
+        seconds = instance.tempo_execucao % 60
+        duration_str = f"{minutes:02d}:{seconds:02d}"
+
+    context = {
+        'instance': instance,
+        'items_nc': items_nc,
+        'site_url': site_url,
+        'duration_str': duration_str,
+        'now': datetime.now()
+    }
+    
+    html_message = render_to_string('emails/forklift_anomaly_email.html', context)
+    plain_message = strip_tags(html_message)
+
+    try:
+        send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, emails, html_message=html_message, fail_silently=False)
+    except Exception as e:
+        pass
+
+def _send_schedule_alerts(schedule, request=None):
+    """Send Email and WhatsApp alerts for new maintenance schedules"""
+    # 1. Email Alerts
+    emails = list(AlertEmail.objects.filter(category='MANUTENCAO').values_list('email', flat=True))
+    if emails:
+        subject = f"🛠️ AGENDAMENTO: MANUTENÇÃO - {schedule.veiculo.placa}"
+        site_url = request.build_absolute_uri('/')[:-1] if request else 'http://localhost:8001'
+        context = {
+            'schedule': schedule,
+            'site_url': site_url,
+            'now': datetime.now()
+        }
+        html_message = render_to_string('emails/schedule_alert_email.html', context)
+        plain_message = strip_tags(html_message)
+        try:
+            send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, emails, html_message=html_message, fail_silently=False)
+        except Exception: pass
+
+    # 2. WhatsApp Alerts (Simulation/Placeholder for API)
+    whatsapp_contacts = AlertWhatsApp.objects.filter(ativo=True)
+    for contact in whatsapp_contacts:
+        # Mocking the WhatsApp API call
+        # In a real scenario: requests.post(GATEWAY_URL, json={'to': contact.numero_completo, 'body': message})
+        print(f"DEBUG: Simulating WhatsApp to {contact.numero_completo}: Agendamento {schedule.veiculo.placa} para {schedule.data_paralizacao}")
+
+# --- DASHBOARD SERIALIZATION HELPERS ---
+
+def _serialize_checklist(obj):
+    return {
+        'id': obj.id,
+        'data_criacao': obj.data_criacao,
+        'anomalias': obj.anomalias,
+        'tipo_equipamento': obj.tipo_equipamento,
+        'porteiro_name': obj.porteiro.get_full_name() or obj.porteiro.username if obj.porteiro else 'S/N',
+        'placa_cavalo_detail': {'placa': obj.placa_cavalo.placa} if obj.placa_cavalo else None,
+        'nome_motorista_detail': {'nome': obj.nome_motorista.nome} if obj.nome_motorista else None,
+        'has_nc': obj.has_nc,
+        'is_resolved': obj.is_resolved,
+    }
+
+def _serialize_maintenance(obj, is_truck=True):
+    data = {
+        'id': obj.id,
+        'data_criacao': obj.data_criacao,
+        'observacoes': obj.observacoes,
+        'veiculo_detail': {'placa': obj.veiculo.placa} if obj.veiculo else None,
+        'motorista_detail': {'nome': obj.motorista.nome} if obj.motorista else None,
+        'responsavel_name': obj.responsavel.get_full_name() or obj.responsavel.username if obj.responsavel else 'S/N',
+        'has_nc': obj.has_nc,
+        'is_resolved': obj.is_resolved,
+    }
+    # Include all items
+    items = TRUCK_MAINTENANCE_ITEMS if is_truck else TRAILER_MAINTENANCE_ITEMS
+    for item in items:
+        data[item['id']] = getattr(obj, item['id'], 'NA')
+    return data
+
+def _serialize_forklift(obj):
+    data = {
+        'id': obj.id,
+        'data_criacao': obj.data_criacao,
+        'observacoes': obj.observacoes,
+        'tipo_equipamento': obj.tipo_equipamento,
+        'tipo_equipamento_display': obj.get_tipo_equipamento_display(),
+        'operador_detail': {'nome': obj.operador.nome} if obj.operador else None,
+        'responsavel_name': obj.responsavel.get_full_name() or obj.responsavel.username if obj.responsavel else 'S/N',
+        'tempo_execucao': obj.tempo_execucao,
+        'has_nc': obj.has_nc,
+        'is_resolved': obj.is_resolved,
+    }
+    for item in FORKLIFT_ITEMS:
+        data[item['id']] = getattr(obj, item['id'], 'NA')
+    return data
+
+@login_required
+def dashboard_view(request):
+    # Fetch all data
+    portaria_qs = Checklist.objects.select_related('placa_cavalo', 'nome_motorista', 'porteiro').order_by('-data_criacao')
+    truck_qs = MaintenanceTruck.objects.select_related('veiculo', 'motorista', 'responsavel').order_by('-data_criacao')
+    trailer_qs = MaintenanceTrailer.objects.select_related('veiculo', 'motorista', 'responsavel').order_by('-data_criacao')
+    forklift_qs = ChecklistForklift.objects.select_related('operador', 'responsavel').order_by('-data_criacao')
+    
+    # Manual serialization for JSON consumption in dashboard.html
+    portaria_data = [_serialize_checklist(c) for c in portaria_qs]
+    truck_data = [_serialize_maintenance(t, True) for t in truck_qs]
+    trailer_data = [_serialize_maintenance(t, False) for t in trailer_qs]
+    forklift_data = [_serialize_forklift(f) for f in forklift_qs]
+    
+    # Calculate Averages (Seconds)
+    avg_portaria = Checklist.objects.aggregate(Avg('tempo_execucao'))['tempo_execucao__avg'] or 0
+    avg_truck = MaintenanceTruck.objects.aggregate(Avg('tempo_execucao'))['tempo_execucao__avg'] or 0
+    avg_trailer = MaintenanceTrailer.objects.aggregate(Avg('tempo_execucao'))['tempo_execucao__avg'] or 0
+    avg_forklift = ChecklistForklift.objects.aggregate(Avg('tempo_execucao'))['tempo_execucao__avg'] or 0
+
+    context = {
+        'portaria_json': json.dumps(portaria_data, cls=DjangoJSONEncoder),
+        'truck_json': json.dumps(truck_data, cls=DjangoJSONEncoder),
+        'trailer_json': json.dumps(trailer_data, cls=DjangoJSONEncoder),
+        'forklift_json': json.dumps(forklift_data, cls=DjangoJSONEncoder),
+        'averages': {
+            'portaria': f"{int(avg_portaria // 60):02d}:{int(avg_portaria % 60):02d}",
+            'truck': f"{int(avg_truck // 60):02d}:{int(avg_truck % 60):02d}",
+            'trailer': f"{int(avg_trailer // 60):02d}:{int(avg_trailer % 60):02d}",
+            'forklift': f"{int(avg_forklift // 60):02d}:{int(avg_forklift % 60):02d}",
+        }
+    }
+    return render(request, 'dashboard.html', context)
+
+from django.shortcuts import redirect
+from django.contrib import messages
+
+@login_required
+def portaria_create_view(request):
+    if request.method == 'POST':
+        try:
+            # Capturar IDs numéricos
+            placa_cavalo_id = request.POST.get('placa_cavalo')
+            nome_motorista_id = request.POST.get('nome_motorista')
+            placa_carreta_01_id = request.POST.get('placa_carreta_01') or None
+            placa_carreta_02_id = request.POST.get('placa_carreta_02') or None
+            
+            # Buscar instancias
+            placa_cavalo = Veiculo.objects.get(id=placa_cavalo_id)
+            nome_motorista = Condutor.objects.get(id=nome_motorista_id)
+            placa_carreta_01 = Veiculo.objects.get(id=placa_carreta_01_id) if placa_carreta_01_id else None
+            placa_carreta_02 = Veiculo.objects.get(id=placa_carreta_02_id) if placa_carreta_02_id else None
+
+            # Construir objeto
+            checklist = Checklist(
+                porteiro=request.user,
+                placa_cavalo=placa_cavalo,
+                nome_motorista=nome_motorista,
+                placa_carreta_01=placa_carreta_01,
+                placa_carreta_02=placa_carreta_02,
+                doc_carreta_entregue=request.POST.get('doc_carreta_entregue') == 'on',
+                tipo_equipamento=request.POST.get('tipo_equipamento', 'PRANCHA'),
+                
+                # Eletrica
+                eletrica_condicoes=request.POST.get('eletrica_condicoes', 'NA'),
+                eletrica_seta=request.POST.get('eletrica_seta', 'NA'),
+                eletrica_re=request.POST.get('eletrica_re', 'NA'),
+                eletrica_freio=request.POST.get('eletrica_freio', 'NA'),
+                eletrica_capas=request.POST.get('eletrica_capas', 'NA'),
+                eletrica_placa=request.POST.get('eletrica_placa', 'NA'),
+
+                # Mecanica
+                mecanica_freios=request.POST.get('mecanica_freios', 'NA'),
+                mecanica_conexoes=request.POST.get('mecanica_conexoes', 'NA'),
+                mecanica_folga_quinta_roda=request.POST.get('mecanica_folga_quinta_roda', 'NA'),
+                mecanica_suspensao=request.POST.get('mecanica_suspensao', 'NA'),
+                mecanica_freio_estacionario=request.POST.get('mecanica_freio_estacionario', 'NA'),
+                mecanica_travas_conteiner=request.POST.get('mecanica_travas_conteiner', 'NA'),
+                mecanica_tampas_equipamento=request.POST.get('mecanica_tampas_equipamento', 'NA'),
+                mecanica_tampas_estado=request.POST.get('mecanica_tampas_estado', 'NA'),
+
+                # Pneus
+                rodas_pneus_quantidade=request.POST.get('rodas_pneus_quantidade', 'NA'),
+                rodas_pneus_reserva=request.POST.get('rodas_pneus_reserva', 'NA'),
+                rodas_pneus_estado=request.POST.get('rodas_pneus_estado', 'NA'),
+                rodas_pneus_cortes_bolhas=request.POST.get('rodas_pneus_cortes_bolhas', 'NA'),
+
+                anomalias=request.POST.get('anomalias', ''),
+                visto_responsavel_saida=request.POST.get('visto_responsavel_saida', ''),
+                visto_motorista_saida=request.POST.get('visto_motorista_saida', ''),
+                tempo_execucao=int(request.POST.get('tempo_execucao', 0)) or None,
+            )
+            checklist.save()
+            
+            # Enviar e-mail de anomalia se existir
+            if checklist.anomalias and checklist.anomalias.strip():
+                _send_portaria_anomaly_email(checklist, request)
+            
+            messages.success(request, 'Checklist da Portaria salvo com sucesso!')
+            return redirect('dashboard')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao salvar: {str(e)}')
+            
+    context = {
+        'condutores': Condutor.objects.all().order_by('nome'),
+        'veiculos_cavalos': Veiculo.objects.filter(tipo='CAVALO').order_by('placa'),
+        'veiculos_carretas': Veiculo.objects.filter(tipo='CARRETA').order_by('placa'),
+    }
+    return render(request, 'portaria_form.html', context)
+
+from django.shortcuts import get_object_or_404
+
+@login_required
+def portaria_detail_view(request, pk):
+    checklist = get_object_or_404(Checklist, pk=pk)
+    return render(request, 'portaria_detail.html', {'checklist': checklist})
+
+from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS
+from .models import MaintenanceTruck, MaintenanceTrailer
+
+@login_required
+def maintenance_create_view(request, m_type):
+    # m_type: 'truck' or 'trailer'
+    is_truck = (m_type == 'truck')
+    items = TRUCK_MAINTENANCE_ITEMS if is_truck else TRAILER_MAINTENANCE_ITEMS
+    ModelClass = MaintenanceTruck if is_truck else MaintenanceTrailer
+    tipo_veiculo = 'CAVALO' if is_truck else 'CARRETA'
+
+    if request.method == 'POST':
+        try:
+            veiculo_id = request.POST.get('veiculo')
+            motorista_id = request.POST.get('motorista')
+            
+            veiculo = get_object_or_404(Veiculo, id=veiculo_id)
+            motorista = get_object_or_404(Condutor, id=motorista_id)
+            
+            # Instanciar modelo
+            instance = ModelClass(
+                responsavel=request.user,
+                veiculo=veiculo,
+                motorista=motorista,
+                observacoes=request.POST.get('observacoes', ''),
+                visto_responsavel=request.POST.get('visto_responsavel', ''),
+                visto_motorista=request.POST.get('visto_motorista', ''),
+                tempo_execucao=int(request.POST.get('tempo_execucao', 0)) or None,
+            )
+            
+            if is_truck:
+                instance.quilometragem = request.POST.get('quilometragem', '')
+
+            # Atribuir checkboxes dinamicamente
+            for item in items:
+                field_value = request.POST.get(item['id'], 'NA')
+                setattr(instance, item['id'], field_value)
+                
+            instance.save()
+            
+            # Send maintenance alert if NC items or observations exist
+            has_nc = any(getattr(instance, item['id']) == 'NAO' for item in items)
+            if has_nc or (instance.observacoes and instance.observacoes.strip()):
+                alert_type = "CAMINHÃO" if is_truck else "CARRETA/BUG"
+                _send_maintenance_alert(instance, alert_type, request)
+
+            messages.success(request, f'Manutenção de {tipo_veiculo} salva com sucesso!')
+            return redirect('dashboard')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao salvar: {str(e)}')
+
+    context = {
+        'items': items,
+        'm_type': m_type,
+        'tipo_titulo': 'Caminhão/Cavalo' if is_truck else 'Carreta/Equipamento',
+        'veiculos': Veiculo.objects.filter(tipo=tipo_veiculo).order_by('placa'),
+        'condutores': Condutor.objects.all().order_by('nome'),
+    }
+    return render(request, 'maintenance_form.html', context)
+
+@login_required
+def maintenance_detail_view(request, m_type, pk):
+    is_truck = (m_type == 'truck')
+    ModelClass = MaintenanceTruck if is_truck else MaintenanceTrailer
+    checklist = get_object_or_404(ModelClass, pk=pk)
+    items = TRUCK_MAINTENANCE_ITEMS if is_truck else TRAILER_MAINTENANCE_ITEMS
+    
+    items_resolved = []
+    for item in items:
+        items_resolved.append({
+            'label': item['label'],
+            'value': getattr(checklist, item['id'], 'NA')
+        })
+
+    context = {
+        'checklist': checklist,
+        'm_type': m_type,
+        'tipo_titulo': 'Caminhão/Cavalo' if is_truck else 'Carreta/Equipamento',
+        'items_resolved': items_resolved,
+    }
+    return render(request, 'maintenance_detail.html', context)
+
+@login_required
+def forklift_create_view(request):
+    items = FORKLIFT_ITEMS
+    
+    if request.method == 'POST':
+        try:
+            operador_id = request.POST.get('operador')
+            operador = get_object_or_404(Condutor, id=operador_id)
+            
+            instance = ChecklistForklift(
+                responsavel=request.user,
+                operador=operador,
+                tipo_equipamento=request.POST.get('tipo_equipamento'),
+                observacoes=request.POST.get('observacoes', ''),
+                visto_responsavel=request.POST.get('visto_responsavel', ''),
+                visto_operador=request.POST.get('visto_operador', ''),
+                tempo_execucao=int(request.POST.get('tempo_execucao', 0)) or None,
+            )
+            
+            # Attributing fields
+            for item in items:
+                setattr(instance, item['id'], request.POST.get(item['id'], 'NA'))
+                
+            instance.save()
+            
+            # Anomaly logic
+            has_nc = any(getattr(instance, item['id']) == 'NAO' for item in items)
+            
+            if has_nc or (instance.observacoes and instance.observacoes.strip()):
+                _send_forklift_anomaly_email(instance, request)
+                
+            messages.success(request, 'Checklist de Empilhadeira salvo com sucesso!')
+            return redirect('dashboard')
+        except Exception as e:
+            messages.error(request, f'Erro ao salvar: {str(e)}')
+            
+    context = {
+        'items': items,
+        'operadores': Condutor.objects.all().order_by('nome'),
+    }
+    return render(request, 'forklift_form.html', context)
+
+@login_required
+def forklift_detail_view(request, pk):
+    checklist = get_object_or_404(ChecklistForklift, pk=pk)
+    items_resolved = []
+    for item in FORKLIFT_ITEMS:
+        items_resolved.append({
+            'label': item['label'],
+            'value': getattr(checklist, item['id'], 'NA')
+        })
+        
+    return render(request, 'forklift_detail.html', {
+        'checklist': checklist,
+        'items_resolved': items_resolved
+    })
+
+@login_required
+def condutor_list_view(request):
+    if request.method == 'POST':
+        # Handles creation and deletion
+        action = request.POST.get('action')
+        if action == 'create':
+            try:
+                Condutor.objects.create(
+                    nome=request.POST.get('nome', '').upper(),
+                    cpf=request.POST.get('cpf', ''),
+                    data_nascimento=request.POST.get('data_nascimento') or None
+                )
+                messages.success(request, 'Motorista cadastrado com sucesso!')
+            except Exception as e:
+                messages.error(request, 'Erro ao cadastrar motorista (CPF já existe?).')
+        elif action == 'delete':
+            try:
+                c_id = request.POST.get('id')
+                Condutor.objects.filter(id=c_id).delete()
+                messages.success(request, 'Motorista excluído com sucesso!')
+            except Exception as e:
+                messages.error(request, 'Erro ao excluir motorista (possui vinculos).')
+        return redirect('condutor_list')
+        
+    condutores = Condutor.objects.all().order_by('nome')
+    return render(request, 'condutor_list.html', {'condutores': condutores})
+
+@login_required
+def veiculo_list_view(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'create':
+            try:
+                Veiculo.objects.create(
+                    placa=request.POST.get('placa', '').upper(),
+                    tipo=request.POST.get('tipo', 'CAVALO'),
+                    modelo=request.POST.get('modelo', '').upper()
+                )
+                messages.success(request, 'Veículo cadastrado com sucesso!')
+            except Exception as e:
+                messages.error(request, 'Erro ao cadastrar veículo (Placa já existe?).')
+        elif action == 'delete':
+            try:
+                v_id = request.POST.get('id')
+                Veiculo.objects.filter(id=v_id).delete()
+                messages.success(request, 'Veículo excluído com sucesso!')
+            except Exception as e:
+                messages.error(request, 'Erro ao excluir veículo (possui vinculos).')
+        return redirect('veiculo_list')
+        
+    veiculos = Veiculo.objects.all().order_by('tipo', 'placa')
+    return render(request, 'veiculo_list.html', {'veiculos': veiculos})
+
+import unicodedata
+import re
+
+@login_required
+def system_admin_view(request):
+    # Only ADMIN and superusers
+    if not request.user.is_superuser and (not hasattr(request.user, 'profile') or request.user.profile.role != 'ADMIN'):
+        messages.error(request, 'Acesso negado. Apenas administradores podem acessar esta área.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'add_email':
+            email = request.POST.get('email', '').strip().lower()
+            category = request.POST.get('category', 'PORTARIA')
+            if email:
+                try:
+                    AlertEmail.objects.create(email=email, category=category)
+                    messages.success(request, f'E-mail {email} adicionado aos alertas de {category}.')
+                except:
+                    messages.error(request, 'Erro ao adicionar e-mail (já cadastrado nesta categoria?)')
+            
+        elif action == 'delete_email':
+            email_id = request.POST.get('id')
+            AlertEmail.objects.filter(id=email_id).delete()
+            messages.success(request, 'E-mail removido da lista de alertas.')
+            
+        elif action == 'add_whatsapp':
+            nome = request.POST.get('nome', '').strip().upper()
+            ddd = request.POST.get('ddd', '').strip()
+            numero = request.POST.get('numero', '').strip()
+            if nome and ddd and numero:
+                AlertWhatsApp.objects.create(nome=nome, ddd=ddd, numero=numero)
+                messages.success(request, f'Contato {nome} ({ddd}{numero}) adicionado aos alertas WhatsApp.')
+            
+        elif action == 'delete_whatsapp':
+            whatsapp_id = request.POST.get('id')
+            AlertWhatsApp.objects.filter(id=whatsapp_id).delete()
+            messages.success(request, 'Contato WhatsApp removido.')
+
+        elif action == 'create_user':
+            import secrets
+            import string
+            
+            full_name = request.POST.get('full_name', '').strip().upper()
+            role = request.POST.get('role', 'CONTROLADOR')
+            cpf = request.POST.get('cpf', '')
+            
+            # Generate a secure 8-character password
+            alphabet = string.ascii_uppercase + string.digits
+            password = ''.join(secrets.choice(alphabet) for _ in range(8))
+            
+            if not full_name:
+                messages.error(request, 'O nome completo é obrigatório.')
+            else:
+                # Logic from React: FIRST.LAST username
+                name_parts = full_name.split()
+                first_name = name_parts[0] if name_parts else ''
+                last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ' '
+                
+                def clean_string(s):
+                    # Remove accents and non-alpha
+                    s = unicodedata.normalize('NFD', s).encode('ascii', 'ignore').decode('utf-8')
+                    return re.sub(r'[^a-zA-Z]', '', s).upper()
+
+                clean_first = clean_string(first_name)
+                clean_last = clean_string(name_parts[-1]) if len(name_parts) > 1 else ''
+                
+                username_base = f"{clean_first}.{clean_last}" if clean_last else clean_first
+                username = username_base
+                
+                # Check for uniqueness and append suffix if needed
+                counter = 2
+                while User.objects.filter(username=username).exists():
+                    username = f"{username_base}.{counter}"
+                    counter += 1
+                
+                try:
+                    # Create user
+                    new_user = User.objects.create_user(
+                        username=username,
+                        password=password,
+                        first_name=first_name,
+                        last_name=last_name,
+                        email=f"{username.lower()}@intalog.com.br"
+                    )
+                    # Update profile (created by signals)
+                    profile = new_user.profile
+                    profile.role = role
+                    profile.cpf = cpf
+                    profile.save()
+                    
+                    messages.success(
+                        request, 
+                        f"{username}|{password}", 
+                        extra_tags='copy_credentials'
+                    )
+                except Exception as e:
+                    err_msg = str(e)
+                    if "UNIQUE constraint failed" in err_msg:
+                        messages.error(request, 'Erro: Já existe um usuário com dados similares ou este login está reservado.')
+                    else:
+                        messages.error(request, f'Erro ao criar usuário: {err_msg}')
+                    
+        return redirect('system_admin')
+
+    context = {
+        'emails_portaria': AlertEmail.objects.filter(category='PORTARIA').order_by('email'),
+        'emails_manutencao': AlertEmail.objects.filter(category='MANUTENCAO').order_by('email'),
+        'whatsapps': AlertWhatsApp.objects.all().order_by('nome'),
+        'users': User.objects.all().select_related('profile').order_by('-date_joined')[:15],
+    }
+    return render(request, 'system_admin.html', context)
+
+@login_required
+def agenda_manutencao_view(request):
+    """View to display the maintenance agenda with filtering"""
+    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
+        messages.error(request, "Acesso restrito para Gestão e Manutenção.")
+        return redirect('home')
+    query = request.GET.get('q', '')
+    filter_date = request.GET.get('date', '')
+    
+    schedules = MaintenanceSchedule.objects.all().order_by('data_paralizacao')
+    
+    if not query and not filter_date:
+        # Default view: Only active events
+        schedules = schedules.exclude(status__in=['CONCLUIDO', 'CANCELADO'])
+    else:
+        # When searching or filtering by date, show everything that matches
+        if query:
+            schedules = schedules.filter(veiculo__placa__icontains=query)
+            
+        if filter_date:
+            try:
+                # Filter schedules that overlap or start on the selected date
+                date_obj = datetime.strptime(filter_date, '%Y-%m-%d').date()
+                schedules = schedules.filter(
+                    Q(data_paralizacao__date=date_obj) | 
+                    Q(data_previsao_liberacao__date=date_obj)
+                )
+            except ValueError:
+                pass
+
+    veiculos = Veiculo.objects.all().order_by('placa')
+    
+    # Prepare events for FullCalendar
+    events = []
+    for s in schedules:
+        # Get logs for this schedule
+        logs = []
+        # Add initial "Pendente" event based on creation
+        logs.append({
+            'action': 'Aberto como PENDENTE',
+            'user': s.criado_por.username,
+            'at': s.data_criacao.strftime('%d/%m/%Y %H:%M')
+        })
+        # Add actual status logs
+        for log in s.logs.all():
+            logs.append({
+                'action': f"Alterado para {log.get_new_status_display()}",
+                'user': log.user.username if log.user else "Sistema",
+                'at': log.created_at.strftime('%d/%m/%Y %H:%M')
+            })
+
+        events.append({
+            'id': s.id,
+            'title': f"{s.veiculo.placa}",
+            'start': s.data_paralizacao.isoformat(),
+            'end': s.data_previsao_liberacao.isoformat(),
+            'description': s.descricao,
+            'status': s.status,
+            'status_label': s.get_status_display(),
+            'logs': logs,
+            'className': f"status-{s.status.lower()}"
+        })
+
+    context = {
+        'events_json': json.dumps(events, cls=DjangoJSONEncoder),
+        'schedules': schedules,
+        'veiculos': veiculos,
+        'today': datetime.now()
+    }
+    return render(request, 'agenda_manutencao.html', context)
+
+@login_required
+def schedule_create_view(request):
+    """AJAX/POST view to create a new maintenance schedule"""
+    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
+        messages.error(request, "Permissão negada.")
+        return redirect('home')
+    if request.method == 'POST':
+        try:
+            veiculo_id = request.POST.get('veiculo')
+            data_paralizacao = request.POST.get('data_paralizacao')
+            data_previsao = request.POST.get('data_previsao_liberacao')
+            descricao = request.POST.get('descricao')
+            
+            # Simple validation
+            if not all([veiculo_id, data_paralizacao, data_previsao, descricao]):
+                messages.error(request, "Todos os campos são obrigatórios.")
+                return redirect('agenda_manutencao')
+
+            veiculo = get_object_or_404(Veiculo, id=veiculo_id)
+            
+            # Conflict Validation (Overlap)
+            conflicts = MaintenanceSchedule.objects.filter(
+                veiculo=veiculo,
+                status__in=['PENDENTE', 'EM_ANDAMENTO'],
+                data_paralizacao__lt=data_previsao,
+                data_previsao_liberacao__gt=data_paralizacao
+            ).exists()
+
+            if conflicts:
+                messages.error(request, f"ERRO: O veículo {veiculo.placa} já possui um agendamento conflitante neste período.")
+                return redirect('agenda_manutencao')
+
+            schedule = MaintenanceSchedule.objects.create(
+                veiculo=veiculo,
+                data_paralizacao=data_paralizacao,
+                data_previsao_liberacao=data_previsao,
+                descricao=descricao,
+                criado_por=request.user
+            )
+            
+            # Refresh to ensure dates are datetime objects for the email template
+            schedule.refresh_from_db()
+
+            # Trigger Alerts
+            _send_schedule_alerts(schedule, request)
+            
+            messages.success(request, f"Manutenção do veículo {veiculo.placa} agendada com sucesso!")
+        except Exception as e:
+            messages.error(request, f"Erro ao agendar manutenção: {str(e)}")
+            
+    return redirect('agenda_manutencao')
+
+@login_required
+def schedule_delete_view(request, pk):
+    """Delete a maintenance schedule"""
+    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
+        messages.error(request, "Permissão negada.")
+        return redirect('agenda_manutencao')
+        
+    schedule = get_object_or_404(MaintenanceSchedule, pk=pk)
+    
+    # Block deletion of finalized schedules
+    if schedule.status in ['CONCLUIDO', 'CANCELADO']:
+        messages.error(request, "Não é possível excluir um agendamento finalizado.")
+        return redirect('agenda_manutencao')
+
+    veiculo_placa = schedule.veiculo.placa
+    schedule.delete()
+    messages.success(request, f"Agendamento do veículo {veiculo_placa} excluído.")
+    return redirect('agenda_manutencao')
+
+def _send_status_update_alerts(schedule, request):
+    """Helper to send alerts when status changes to final states"""
+    # Logic for Email (only for CONCLUIDO/CANCELADO)
+    if schedule.status in ['CONCLUIDO', 'CANCELADO']:
+        emails = AlertEmail.objects.filter(category='MANUTENCAO').values_list('email', flat=True)
+        if emails:
+            subject = f"ATUALIZAÇÃO DE MANUTENÇÃO: {schedule.veiculo.placa} - {schedule.get_status_display().upper()}"
+            site_url = request.build_absolute_uri('/')[:-1]
+            
+            html_content = render_to_string('emails/status_update_email.html', {
+                'schedule': schedule,
+                'site_url': site_url,
+                'user': request.user,
+                'now': datetime.now(),
+                'advise_checklist': schedule.status == 'CONCLUIDO'
+            })
+            
+            try:
+                send_mail(
+                    subject,
+                    "",
+                    settings.EMAIL_HOST_USER,
+                    list(emails),
+                    html_message=html_content
+                )
+            except Exception as e:
+                print(f"Error sending status email: {e}")
+
+        # WhatsApp Logic Simulator
+        contacts = AlertWhatsApp.objects.filter(ativo=True)
+        for contact in contacts:
+            msg = f"*ATUALIZAÇÃO DE MANUTENÇÃO*\n\n"
+            msg += f"Veículo: {schedule.veiculo.placa}\n"
+            msg += f"Situação: {schedule.get_status_display().upper()}\n"
+            msg += f"Descrição: {schedule.descricao}\n\n"
+            if schedule.status == 'CONCLUIDO':
+                msg += "✅ Veículo LIBERADO para escala.\n"
+                msg += "💡 *Aconselhamos a realização de um checklist completo do veículo* para garantir a segurança operacional."
+            
+            # Safe print for Windows console simulation
+            try:
+                print(f"SIMULANDO WHATSAPP PARA {contact.numero_completo}: {msg}")
+            except UnicodeEncodeError:
+                safe_msg = msg.encode('ascii', 'replace').decode('ascii')
+                print(f"SIMULANDO WHATSAPP PARA {contact.numero_completo} (ASCII-Safe): {safe_msg}")
+
+@login_required
+def schedule_update_status_view(request, pk):
+    """Update status of a maintenance schedule"""
+    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
+        messages.error(request, "Permissão negada.")
+        return redirect('agenda_manutencao')
+
+    schedule = get_object_or_404(MaintenanceSchedule, pk=pk)
+    
+    # Block updates to finalized schedules
+    if schedule.status in ['CONCLUIDO', 'CANCELADO']:
+        messages.error(request, "Agendamentos finalizados não podem ser alterados.")
+        return redirect('agenda_manutencao')
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        old_status = schedule.status
+        if new_status in dict(MaintenanceSchedule.STATUS_CHOICES) and new_status != old_status:
+            # Workflow Validation: CONCLUIDO requires EM_ANDAMENTO
+            if new_status == 'CONCLUIDO' and old_status != 'EM_ANDAMENTO':
+                messages.error(request, "Uma manutenção só pode ser CONCLUÍDA se estiver EM ANDAMENTO.")
+                return redirect('agenda_manutencao')
+
+            # Save the change
+            schedule.status = new_status
+            schedule.save()
+            
+            # Create History Log
+            MaintenanceStatusLog.objects.create(
+                schedule=schedule,
+                old_status=old_status,
+                new_status=new_status,
+                user=request.user
+            )
+
+            # Send alerts only for final statuses or significant changes
+            _send_status_update_alerts(schedule, request)
+            
+            messages.success(request, f"Status do veículo {schedule.veiculo.placa} atualizado para {schedule.get_status_display()}.")
+    
+    return redirect('agenda_manutencao')
+
+@login_required
+def resolve_checklist_view(request, checklist_type, pk):
+    # Only ADMIN, GESTOR, MANUTENCAO can resolve
+    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
+        messages.error(request, 'Você não tem permissão para sinalizar como resolvido.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        ModelClass = None
+        redirect_url = 'dashboard'
+        
+        if checklist_type == 'portaria':
+            ModelClass = Checklist
+            redirect_url = 'portaria_detail'
+        elif checklist_type == 'truck':
+            ModelClass = MaintenanceTruck
+            redirect_url = 'maintenance_detail'
+        elif checklist_type == 'trailer':
+            ModelClass = MaintenanceTrailer
+            redirect_url = 'maintenance_detail'
+        elif checklist_type == 'forklift':
+            ModelClass = ChecklistForklift
+            redirect_url = 'forklift_detail'
+
+        if ModelClass:
+            checklist = get_object_or_404(ModelClass, pk=pk)
+            checklist.resolvido_por = request.user
+            checklist.data_resolucao = timezone.now()
+            checklist.save()
+            messages.success(request, '✅ Checklist sinalizado como RESOLVIDO com sucesso!')
+            
+            if checklist_type in ['truck', 'trailer']:
+                return redirect(redirect_url, m_type=checklist_type, pk=pk)
+            return redirect(redirect_url, pk=pk)
+
+    return redirect('dashboard')

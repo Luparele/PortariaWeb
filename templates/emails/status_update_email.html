@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; }
+        .header { background-color: {% if schedule.status == 'CONCLUIDO' %}#10b981{% elif schedule.status == 'CANCELADO' %}#ef4444{% else %}#3b82f6{% endif %}; color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+        .content { padding: 30px; background-color: #ffffff; }
+        .footer { padding: 20px; text-align: center; font-size: 11px; color: #94a3b8; }
+        .vehicle-box { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .placa { font-size: 24px; font-weight: 800; color: #1e293b; margin: 0; }
+        .label { font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; }
+        .status { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: {% if schedule.status == 'CONCLUIDO' %}#10b981{% elif schedule.status == 'CANCELADO' %}#ef4444{% else %}#3b82f6{% endif %}; color: #fff; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin:0; font-size: 20px; text-transform: uppercase; letter-spacing: 0.05em;">Atualização de Manutenção</h1>
+        </div>
+        <div class="content">
+            <p>Olá,</p>
+            <p>A situação da manutenção do veículo abaixo foi atualizada no sistema <strong>Check-up & Manutenção</strong>.</p>
+            
+            <div class="vehicle-box">
+                <div style="margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                    <span class="status">{{ schedule.get_status_display }}</span>
+                    {% if schedule.status == 'CONCLUIDO' %}
+                        <p style="font-size: 10px; font-weight: 800; color: #10b981; text-transform: uppercase; margin-top: 10px;">
+                            ✅ LIBERADO: O veículo já pode retornar à escala de operações.
+                        </p>
+                        <p style="font-size: 11px; background-color: #f0fdf4; padding: 10px; border-radius: 8px; border-left: 4px solid #10b981; color: #166534;">
+                            💡 <strong>CONSELHO:</strong> Aconselhamos a realização de um checklist completo do veículo para garantir a conformidade operacional.
+                        </p>
+                    {% elif schedule.status == 'CANCELADO' %}
+                        <p style="font-size: 10px; font-weight: 800; color: #ef4444; text-transform: uppercase; margin-top: 10px;">
+                            🚫 CANCELADO: Manutenção abortada.
+                        </p>
+                        <p style="font-size: 11px; background-color: #fef2f2; padding: 10px; border-radius: 8px; border-left: 4px solid #ef4444; color: #991b1b;">
+                            ✅ <strong>DISPONÍVEL:</strong> O veículo está liberado para operações normais.
+                        </p>
+                    {% endif %}
+                </div>
+                <p class="label">Veículo</p>
+                <p class="placa">{{ schedule.veiculo.placa }}</p>
+                
+                <hr style="border:0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+                
+                <p class="label">Descrição Original</p>
+                <p style="font-style: italic; color: #475569; font-size: 13px;">"{{ schedule.descricao }}"</p>
+            </div>
+
+            <p style="font-size: 12px;">Atualizado por: <strong>{{ user.get_full_name|default:user.username }}</strong> em {{ now|date:"d/m/Y H:i" }}</p>
+
+            <div style="text-align: center;">
+                <a href="{{ site_url }}{% url 'agenda_manutencao' %}" class="btn">Abrir Agenda</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>© {{ now|date:"Y" }} Intalog Logística Transportes Ltda<br>Check-up & Manutenção</p>
+        </div>
+    </div>
+</body>
+</html>

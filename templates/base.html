@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Check-up & Manutenção{% endblock %}</title>
+    
+    <!-- Tailwind CSS (via CDN para desenvolvimento) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configuração do Tailwind -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {}
+        }
+      }
+    </script>
+    
+    <!-- Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="/static/img/pwa-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    {% block extra_head %}{% endblock %}
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registrado!', reg))
+            .catch(err => console.log('Erro ao registrar Service Worker:', err));
+        });
+      }
+    </script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 w-full overflow-x-hidden flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 md:top-0 md:bottom-auto md:border-b md:border-t-0 p-3 md:px-6 lg:px-8 print:hidden transition-all duration-300">
+        <div class="max-w-7xl mx-auto flex items-center w-full">
+            
+            <!-- PARTE 1: ESQUERDA (LOGO) -->
+            <div class="hidden lg:flex w-1/4 justify-start shrink-0">
+                <a href="{% url 'home' %}" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <img src="/static/img/logo.png" alt="INTALOG" class="h-8 lg:h-10" />
+                </a>
+            </div>
+            
+            <!-- ESPAÇADOR PARA TABLET (Mantém o centro quando o logo some) -->
+            <div class="hidden md:flex lg:hidden w-1/4"></div>
+            
+            <!-- PARTE 2: CENTRO (LINKS) -->
+            <div class="flex-1 flex justify-around md:justify-center items-center gap-1 sm:gap-4 md:gap-3 lg:gap-8 font-bold">
+                <!-- Botão Início (Mobile) -->
+                <a href="/" class="flex flex-col items-center gap-1 transition-colors md:hidden text-slate-600 hover:text-blue-600">
+                    <i data-lucide="layout" class="w-6 h-6"></i>
+                    <span class="text-[9px] uppercase font-black text-center leading-tight">Início</span>
+                </a>
+                       {% if request.user.is_authenticated %}
+                    <!-- Checklist Portaria -->
+                    {% if request.user.profile.role in 'CONTROLADOR,ADMIN' %}
+                    <a href="{% url 'portaria_create' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-blue-600 group">
+                        <i data-lucide="shield-check" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[65px]">Checklist<br>Portaria</span>
+                    </a>
+                    {% endif %}
+
+                    <!-- Manutenção Física -->
+                    {% if request.user.profile.role in 'MANUTENCAO,ADMIN' %}
+                    <a href="{% url 'maintenance_create' 'truck' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-amber-600 group">
+                        <i data-lucide="truck" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[65px]">Mnt<br>Caminhão</span>
+                    </a>
+                    <a href="{% url 'maintenance_create' 'trailer' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-amber-600 group">
+                        <i data-lucide="container" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[65px]">Mnt<br>Carreta</span>
+                    </a>
+                    <a href="{% url 'forklift_create' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-indigo-600 group">
+                        <i data-lucide="forklift" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[70px]">Checklist<br>Empilhadeira</span>
+                    </a>
+                    {% endif %}
+
+                    <!-- Gestão & Planejamento -->
+                    {% if request.user.profile.role in 'MANUTENCAO,ADMIN,GESTOR' %}
+                    <a href="{% url 'agenda_manutencao' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-red-600 group">
+                        <i data-lucide="calendar-range" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[70px]">Agenda<br>Mnt</span>
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-blue-600 group">
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-[9px] uppercase font-bold text-center leading-[1.1]">Relatórios</span>
+                    </a>
+                    {% endif %}
+
+                    <!-- Admin Tools (Desktop/Tablet) -->
+                    {% if request.user.profile.role == 'ADMIN' %}
+                    <div class="hidden md:flex items-center gap-2 lg:gap-4 border-l border-slate-100 pl-2 lg:pl-6 ml-1 lg:ml-4">
+                        <a href="{% url 'condutor_list' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-500 hover:text-blue-600 group" title="Motoristas">
+                            <i data-lucide="user-plus" class="w-5 h-5 group-hover:scale-105 transition-transform"></i>
+                            <span class="text-[8px] uppercase font-black text-center">Motoristas</span>
+                        </a>
+                        <a href="{% url 'veiculo_list' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-500 hover:text-blue-600 group" title="Veículos">
+                            <i data-lucide="truck" class="w-5 h-5 group-hover:scale-105 transition-transform"></i>
+                            <span class="text-[8px] uppercase font-black text-center">Veículos</span>
+                        </a>
+                        <a href="{% url 'system_admin' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-500 hover:text-blue-600 group" title="Configurações">
+                            <i data-lucide="settings" class="w-5 h-5 group-hover:scale-105 transition-transform"></i>
+                            <span class="text-[8px] uppercase font-black text-center">Ajustes</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- PARTE 3: DIREITA (USUÁRIO) -->
+            <div class="hidden md:flex w-1/4 justify-end items-center gap-2 lg:gap-5 shrink-0 pl-2 lg:pl-4 border-l border-slate-200">
+                {% if request.user.is_authenticated %}
+                <div class="text-right hidden lg:block">
+                    <p class="text-[10px] font-black text-slate-800 leading-none uppercase">{{ request.user.username }}</p>
+                    <p class="text-[8px] font-bold text-blue-600 uppercase tracking-tighter mt-0.5">{{ request.user.profile.get_role_display|truncatechars:12 }}</p>
+                </div>
+                <div class="flex items-center">
+                    <a href="{% url 'password_change' %}" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Alterar Senha">
+                        <i data-lucide="key-round" class="w-4 h-4 lg:w-5 lg:h-5"></i>
+                    </a>
+                    <form method="post" action="{% url 'logout' %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Sair">
+                            <i data-lucide="log-out" class="w-4 h-4 lg:w-5 lg:h-5"></i>
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Logout Mobile (Overlay ou Dropdown no futuro, hoje visível no centro/direita do mobile) -->
+            {% if request.user.is_authenticated %}
+                <div class="flex items-center gap-3 md:hidden pr-2">
+                    <a href="{% url 'password_change' %}" class="p-2 text-indigo-600" title="Senha">
+                        <i data-lucide="key-round" class="w-6 h-6"></i>
+                    </a>
+                    <form method="post" action="{% url 'logout' %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="p-2 text-slate-400">
+                            <i data-lucide="log-out" class="w-6 h-6"></i>
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 pb-20 md:pt-28 md:px-8 w-full max-w-7xl mx-auto">
+        <!-- Mobile Header (hidden on md+) -->
+        <header class="mb-8 text-center md:hidden">
+            <a href="{% url 'home' %}">
+                <img src="/static/img/logo.png" alt="INTALOG" class="h-12 mx-auto mb-4 pointer-events-auto" />
+            </a>
+            {% if request.user.is_authenticated %}
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm text-[9px] font-black text-slate-800 uppercase tracking-tight">
+                <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                {{ request.user.username }} • {{ request.user.profile.get_role_display }}
+            </div>
+            {% endif %}
+        </header>
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer Simples -->
+    <footer class="mt-auto py-8 px-4 border-t border-slate-200 text-center print:hidden">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+            © {% now "Y" %} Intalog Logistica Transportes Ltda • Todos os direitos reservados
+        </p>
+    </footer>
+
+    <!-- Inicializar Ícones Lucide -->
+    <script>
+      lucide.createIcons();
+    </script>
+</body>
+</html>

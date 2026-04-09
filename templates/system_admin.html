@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+
+{% block title %}Check-up & Manutenção - Administração do Sistema{% endblock %}
+
+{% block content %}
+<div class="space-y-12 animate-in slide-in-from-bottom-6 duration-700 pb-20 max-w-6xl mx-auto">
+    <!-- 1. Header Administrativo -->
+    <div class="bg-slate-900 p-10 rounded-3xl border-b-4 border-indigo-500 shadow-2xl relative overflow-hidden group">
+        <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full -mr-48 -mt-48 blur-3xl"></div>
+        <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h2 class="text-4xl font-black text-white italic tracking-tighter uppercase mb-1">Central de Administração</h2>
+                <p class="text-indigo-400 text-xs font-black tracking-widest uppercase italic leading-none">Controle Total do Ecossistema INTALOG</p>
+            </div>
+            <a href="{% url 'dashboard' %}" class="bg-white/10 hover:bg-white/20 p-4 rounded-2xl text-white transition-all active:scale-95 group shrink-0">
+                <i data-lucide="x" class="w-6 h-6 group-hover:rotate-90 transition-transform"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Mensagens Django -->
+    {% if messages %}
+    <div class="space-y-4">
+        {% for message in messages %}
+            {% if "copy_credentials" in message.tags %}
+            <!-- Painel Especial de Cópia (Credenciais) -->
+            <div id="credential_card" class="bg-indigo-600 p-1 rounded-3xl shadow-2xl shadow-indigo-200 animate-in zoom-in-95 duration-500 overflow-hidden">
+                <div class="bg-slate-900 rounded-[calc(1.5rem-4px)] p-6 flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/30">
+                            <i data-lucide="key-round" class="text-indigo-400 w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-black uppercase italic tracking-tighter text-lg">Usuário Criado com Sucesso!</h4>
+                            <p class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Cópia Automática Disponível</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row items-stretch gap-3 w-full md:w-auto">
+                        <div class="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex flex-col justify-center">
+                            <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Login</span>
+                            <span class="text-white font-mono text-sm font-bold tracking-tight" id="display_login">---</span>
+                        </div>
+                        <div class="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex flex-col justify-center">
+                            <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Senha</span>
+                            <span class="text-white font-mono text-sm font-bold tracking-tight" id="display_pass">---</span>
+                        </div>
+                        <button 
+                            id="btnCopyAccess"
+                            data-raw="{{ message.message }}"
+                            onclick="copyAccess(this)"
+                            class="bg-indigo-500 hover:bg-indigo-400 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest italic transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
+                        >
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                            <span>Copiar Acesso</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const card = document.getElementById('credential_card');
+                    const container = document.getElementById('copyToolContainer');
+                    const raw = document.getElementById('btnCopyAccess').dataset.raw;
+                    
+                    // Mover o card para baixo do botão
+                    if (card && container) {
+                        container.appendChild(card);
+                    }
+
+                    const parts = raw.split('|');
+                    if (parts.length === 2) {
+                        document.getElementById('display_login').innerText = parts[0];
+                        document.getElementById('display_pass').innerText = parts[1];
+                    }
+                });
+            </script>
+            {% else %}
+            <div class="p-4 rounded-2xl text-sm font-bold uppercase tracking-wide flex items-center gap-3 shadow-md border 
+                {% if message.tags == 'error' %}bg-red-50 text-red-600 border-red-100{% else %}bg-green-50 text-green-700 border-green-100{% endif %}">
+                <i data-lucide="{% if message.tags == 'error' %}alert-circle{% else %}check-circle{% endif %}" class="w-5 h-5"></i>
+                {{ message }}
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Coluna Principal (Alertas e Usuários) -->
+        <div class="lg:col-span-2 space-y-8">
+            
+            <!-- Email Manager (Alertas) -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-slate-900 p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <h3 class="text-2xl font-black text-white italic tracking-tighter uppercase mb-1 flex items-center gap-2">
+                            <i data-lucide="mail" class="text-orange-500 w-6 h-6"></i>
+                            Alertas de Anomalia
+                        </h3>
+                        <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest italic leading-none">Distribuição Automática de Notificações</p>
+                    </div>
+
+                    <form method="post" class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_email">
+                        <div class="flex flex-col sm:flex-row gap-2 bg-slate-800 p-1 rounded-2xl border border-white/5">
+                            <div class="relative">
+                                <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4"></i>
+                                <input 
+                                    type="email" 
+                                    name="email"
+                                    placeholder="E-MAIL PARA ALERTA"
+                                    class="bg-transparent border-0 text-white placeholder:text-slate-600 px-10 py-3 text-xs font-bold w-full sm:w-64 focus:ring-0 outline-none"
+                                    required
+                                />
+                            </div>
+                            <select 
+                                name="category"
+                                class="bg-slate-700 border-0 text-white text-[10px] font-black rounded-xl px-4 py-3 sm:py-0 focus:ring-0 uppercase tracking-widest hover:bg-slate-600 transition-colors cursor-pointer outline-none h-[44px] sm:h-auto"
+                            >
+                                <option value="PORTARIA">Portaria</option>
+                                <option value="MANUTENCAO">Manutenção</option>
+                            </select>
+                        </div>
+                        <button 
+                            type="submit"
+                            class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest italic shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+                        >
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="p-8">
+                    <div class="flex flex-col md:flex-row gap-8">
+                        <!-- Portaria -->
+                        <div class="flex-1 flex flex-col min-h-[300px]">
+                            <div class="p-4 rounded-t-2xl border-x border-t border-slate-100 flex items-center justify-between bg-slate-50">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="shield-ellipsis" class="text-blue-500 w-5 h-5"></i>
+                                    <h4 class="text-[10px] font-black text-slate-700 uppercase tracking-widest">Acessos e Portaria</h4>
+                                </div>
+                                <span class="bg-white px-2 py-0.5 rounded text-[9px] font-black text-slate-400 border border-slate-100">{{ emails_portaria|length }} E-MAILS</span>
+                            </div>
+                            <div class="flex-1 bg-white border border-slate-100 rounded-b-2xl p-4 space-y-2 overflow-y-auto">
+                                {% for item in emails_portaria %}
+                                <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl group hover:bg-white hover:shadow-sm transition-all">
+                                    <span class="text-xs font-bold text-slate-600 truncate mr-2">{{ item.email }}</span>
+                                    <form method="post" onsubmit="return confirm('Excluir este e-mail?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_email">
+                                        <input type="hidden" name="id" value="{{ item.id }}">
+                                        <button type="submit" class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% empty %}
+                                <div class="flex flex-col items-center justify-center py-10 opacity-20">
+                                    <i data-lucide="mail" class="w-8 h-8 mb-2"></i>
+                                    <p class="text-[10px] font-black uppercase tracking-tight">Lista Vazia</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Manutencao -->
+                        <div class="flex-1 flex flex-col min-h-[300px]">
+                            <div class="p-4 rounded-t-2xl border-x border-t border-slate-100 flex items-center justify-between bg-slate-50">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="wrench" class="text-orange-500 w-4 h-4"></i>
+                                    <h4 class="text-[10px] font-black text-slate-700 uppercase tracking-widest">Equipe Manutenção</h4>
+                                </div>
+                                <span class="bg-white px-2 py-0.5 rounded text-[9px] font-black text-slate-400 border border-slate-100">{{ emails_manutencao|length }} E-MAILS</span>
+                            </div>
+                            <div class="flex-1 bg-white border border-slate-100 rounded-b-2xl p-4 space-y-2 overflow-y-auto">
+                                {% for item in emails_manutencao %}
+                                <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl group hover:bg-white hover:shadow-sm transition-all">
+                                    <span class="text-xs font-bold text-slate-600 truncate mr-2">{{ item.email }}</span>
+                                    <form method="post" onsubmit="return confirm('Excluir este e-mail?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_email">
+                                        <input type="hidden" name="id" value="{{ item.id }}">
+                                        <button type="submit" class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% empty %}
+                                <div class="flex flex-col items-center justify-center py-10 opacity-20">
+                                    <i data-lucide="mail" class="w-8 h-8 mb-2"></i>
+                                    <p class="text-[10px] font-black uppercase tracking-tight">Lista Vazia</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NOTIFICAÇÕES WHATSAPP -->
+                <div class="p-8 pt-0 border-t border-slate-50">
+                    <div class="bg-emerald-50 rounded-3xl p-6 mt-8">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                            <div>
+                                <h3 class="text-xl font-black text-emerald-900 uppercase tracking-tighter flex items-center gap-2">
+                                    <i data-lucide="message-circle" class="text-emerald-500"></i>
+                                    Notificações WhatsApp
+                                </h3>
+                                <p class="text-emerald-600/60 text-[10px] font-black uppercase tracking-widest leading-none">Agendamentos em Tempo Real</p>
+                            </div>
+
+                            <form method="post" class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="add_whatsapp">
+                                <div class="flex flex-col sm:flex-row gap-2 bg-white p-1 rounded-2xl border border-emerald-100">
+                                    <input type="text" name="nome" placeholder="NOME" class="bg-transparent border-0 px-4 py-3 text-xs font-bold focus:ring-0 outline-none uppercase w-full sm:w-32" required />
+                                    <input type="text" name="ddd" placeholder="DDD" maxlength="2" class="bg-transparent border-0 px-4 py-3 text-xs font-bold focus:ring-0 outline-none w-full sm:w-16" required />
+                                    <input type="text" name="numero" placeholder="NÚMERO" maxlength="9" class="bg-transparent border-0 px-4 py-3 text-xs font-bold focus:ring-0 outline-none w-full sm:w-40" required />
+                                </div>
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+                                    <i data-lucide="plus" class="w-5 h-5"></i>
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {% for item in whatsapps %}
+                            <div class="flex items-center justify-between p-4 bg-white border border-emerald-100 rounded-2xl group hover:shadow-md transition-all">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+                                        <i data-lucide="user" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-black text-slate-800 uppercase leading-none mb-1">{{ item.nome }}</p>
+                                        <p class="text-[10px] font-bold text-emerald-600">({{ item.ddd }}) {{ item.numero }}</p>
+                                    </div>
+                                </div>
+                                <form method="post" onsubmit="return confirm('Excluir este contato?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_whatsapp">
+                                    <input type="hidden" name="id" value="{{ item.id }}">
+                                    <button type="submit" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            {% empty %}
+                            <div class="col-span-full py-10 flex flex-col items-center justify-center opacity-30 italic">
+                                <i data-lucide="message-square-off" class="w-8 h-8 mb-2"></i>
+                                <span class="text-xs font-bold uppercase">Nenhum contato cadastrado</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Register (Novo Operador) -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-slate-900 p-8 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+                    <div class="relative z-10">
+                        <h3 class="text-2xl font-black text-white italic tracking-tighter uppercase mb-1">Novo Operador do Sistema</h3>
+                        <p class="text-indigo-400 text-[10px] font-black uppercase tracking-widest leading-none italic">Cadastro Rápido de Usuários</p>
+                    </div>
+                </div>
+
+                <div class="p-8">
+                    <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_user">
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nome Completo</label>
+                            <div class="relative">
+                                <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
+                                <input required name="full_name" class="w-full bg-slate-50 border-0 rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-indigo-500 font-bold uppercase text-sm outline-none transition-all" placeholder="EX: JOÃO DA SILVA SANTOS" />
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">CPF (Opcional)</label>
+                            <input name="cpf" id="cpfInput" placeholder="000.000.000-00" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-sm outline-none transition-all" />
+                        </div>
+
+                        <div class="md:col-span-1">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Tipo de Usuário</label>
+                            <div class="relative">
+                                <i data-lucide="shield" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
+                                <select name="role" class="w-full bg-slate-50 border-0 rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-sm h-[56px] outline-none transition-all cursor-pointer">
+                                    <option value="CONTROLADOR">CONTROLE DE ACESSO</option>
+                                    <option value="MANUTENCAO">MANUTENÇÃO</option>
+                                    <option value="GESTOR">GESTOR</option>
+                                    <option value="ADMIN">ADMINISTRADOR</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-4">
+                            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                                <i data-lucide="shield-check" class="text-white w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-[10px] font-black text-indigo-900 uppercase tracking-widest leading-none mb-1">Segurança Ativa</h4>
+                                <p class="text-[10px] font-bold text-indigo-400">Uma senha segura de 8 dígitos será gerada automaticamente após o cadastro.</p>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 pt-4">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-3">
+                                <i data-lucide="user-plus" class="w-5 h-5"></i>
+                                Cadastrar Novo Usuário
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Container para Ferramenta de Cópia (posicionado abaixo do botão) -->
+                    <div id="copyToolContainer" class="mt-8"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna Lateral (Ultimos Usuários e Atalhos) -->
+        <div class="space-y-8">
+            <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm sticky top-24">
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <i data-lucide="users" class="text-indigo-600 w-5 h-5"></i>
+                    Usuários Recentes
+                </h3>
+                
+                <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                    {% for u in users %}
+                    <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-indigo-600 text-xs">
+                            {{ u.username|first|upper }}
+                        </div>
+                        <div class="flex-1 overflow-hidden">
+                            <p class="text-xs font-black text-slate-800 truncate leading-none mb-1">{{ u.get_full_name|default:u.username }}</p>
+                            <p class="text-[9px] font-bold text-indigo-400 uppercase tracking-tighter">
+                                {{ u.profile.role }} • 
+                                {% if u.profile.cpf %}{{ u.profile.cpf }}{% else %}SEM CPF{% endif %} • 
+                                {{ u.date_joined|date:"d/m/y" }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-8 pt-8 border-t border-slate-50 space-y-4">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ferramentas Base</h3>
+                    
+                    <a 
+                        href="/admin/" 
+                        target="_blank" 
+                        class="flex items-center justify-between w-full bg-red-600 hover:bg-red-700 border border-red-500 shadow-lg shadow-red-200 p-4 rounded-2xl group transition-all"
+                    >
+                        <span class="text-[10px] font-black text-white uppercase tracking-widest">Django Admin (Nativo)</span>
+                        <i data-lucide="settings" class="text-white/80 group-hover:rotate-90 transition-all w-5 h-5"></i>
+                    </a>
+
+                    <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                        <p class="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-1">Dica Admin</p>
+                        <p class="text-[10px] text-indigo-900 font-bold leading-tight">O login gerado é automático: NOME.SOBRENOME</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Máscara CPF Vanilla JS
+    document.getElementById('cpfInput').addEventListener('input', function(e) {
+        let value = e.target.value;
+        value = value.replace(/\D/g,"");
+        value = value.replace(/(\d{3})(\d)/,"$1.$2");
+        value = value.replace(/(\d{3})(\d)/,"$1.$2");
+        value = value.replace(/(\d{3})(\d{1,2})$/,"$1-$2");
+        e.target.value = value;
+    });
+
+    // Função de Cópia
+    function copyAccess(btn) {
+        const raw = btn.dataset.raw;
+        const [user, pass] = raw.split('|');
+        const text = `DADOS DE ACESSO CHECK-UP & MANUTENÇÃO\n\nLogin: ${user}\nSenha: ${pass}\n\n⚠️ POR SEGURANÇA, ALTERE SUA SENHA NO PRIMEIRO ACESSO:\n${window.location.origin}/password_change/\n\nAcesse o sistema em: ${window.location.origin}`;
+        
+        navigator.clipboard.writeText(text).then(() => {
+            const originalHtml = btn.innerHTML;
+            btn.classList.add('bg-green-600', 'hover:bg-green-700');
+            btn.classList.remove('bg-indigo-500', 'hover:bg-indigo-400');
+            btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> <span>Copiado!</span>';
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                btn.classList.add('bg-indigo-500', 'hover:bg-indigo-400');
+                btn.innerHTML = originalHtml;
+                lucide.createIcons();
+            }, 3000);
+        });
+    }
+</script>
+{% endblock %}

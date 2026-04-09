@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+
+{% block title %}Check-up & Manutenção - Checklist #{{ checklist.id }}{% endblock %}
+
+{% block extra_head %}
+<!-- Styles specific for printing -->
+<style>
+  @media print {
+    @page { size: A4; margin: 8mm; }
+    body { background: white !important; font-size: 11px !important; }
+    .max-w-4xl { max-width: 100% !important; margin: 0 !important; }
+    .shadow-xl, .shadow-sm, .shadow-lg { box-shadow: none !important; }
+    .rounded-3xl, .rounded-2xl { border-radius: 4px !important; }
+    .bg-slate-900 { background: #1e293b !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .p-8 { padding: 1rem !important; }
+    .mb-8, .mb-6 { margin-bottom: 0.5rem !important; }
+    .grid-cols-1, .md\:grid-cols-2, .md\:grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.5rem !important; }
+    .DetailSection { margin-bottom: 0.5rem !important; page-break-inside: avoid; }
+    .InfoItem { gap: 0.25rem !important; }
+    .text-2xl { font-size: 1.25rem !important; }
+    .w-14, .h-14 { width: 2.5rem !important; height: 2.5rem !important; }
+    .pb-20 { padding-bottom: 0 !important; }
+    .print-signatures { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 1rem !important; }
+    .animate-in { animation: none !important; }
+    .bg-slate-50 { background: #f8fafc !important; }
+    .border-slate-100 { border-color: #e2e8f0 !important; }
+    /* Esconder o nav base e botão menu */
+    nav, header, aside, .sidebar { display: none !important; }
+    /* Limpar padding do main se houver */
+    main { padding: 0 !important; margin: 0 !important; }
+  }
+</style>
+
+<!-- Removed macros as Django does not support them -->
+
+{% endblock %}
+
+{% block content %}
+<div class="animate-in slide-in-from-right-4 duration-300 max-w-4xl mx-auto pb-20">
+    <!-- Action Bar -->
+    <div class="flex justify-between items-center mb-6 print:hidden gap-4">
+        <a href="{% url 'dashboard' %}" class="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-bold text-sm uppercase tracking-tight">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar ao Painel
+        </a>
+        <div class="flex items-center gap-3">
+            {% if checklist.has_nc and not checklist.is_resolved and request.user.profile.role in 'ADMIN,GESTOR,MANUTENCAO' %}
+            <form action="{% url 'resolve_checklist' 'portaria' checklist.id %}" method="POST" id="resolveForm">
+                {% csrf_token %}
+                <button type="button" onclick="confirmResolution()" class="flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-xl hover:bg-amber-600 transition-all font-bold text-sm uppercase tracking-tight shadow-lg shadow-amber-500/20 border border-amber-600">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i> Sinalizar como Resolvido
+                </button>
+            </form>
+            <script>
+                function confirmResolution() {
+                    if (confirm("⚠️ ATENÇÃO: Ao confirmar, você declara que todos os itens não conformes deste checklist foram devidamente corrigidos.\n\nEsta ação ficará registrada com seu usuário. Deseja prosseguir?")) {
+                        document.getElementById('resolveForm').submit();
+                    }
+                }
+            </script>
+            {% endif %}
+            
+            <button onclick="window.print()" class="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2 rounded-xl hover:bg-blue-600 hover:text-white transition-all font-bold text-sm uppercase tracking-tight border border-slate-200 shadow-sm">
+                <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Relatório
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN HTML VIEW -->
+    <div class="print:hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 bg-slate-900 p-8 rounded-3xl border-b-4 border-blue-500 shadow-xl">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-blue-500 text-slate-900 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <i data-lucide="shield-check" class="w-7 h-7"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black text-white tracking-tight leading-none mb-1 uppercase italic">Reg. Entrada/Saída #{{ checklist.id }}</h1>
+                    <p class="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em]">Checklist Entrada e Saída</p>
+                </div>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+                <div class="text-right">
+                    <span class="text-white/40 text-[10px] font-black uppercase tracking-widest leading-none mb-1 block">Data do Registro</span>
+                    <span class="text-white font-bold">{{ checklist.data_criacao|date:"d/m/Y H:i:s" }}</span>
+                </div>
+                <div class="bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20 text-right mt-1">
+                    <span class="text-blue-400 text-[9px] font-black uppercase tracking-widest leading-none block">Tempo de Execução</span>
+                    <span class="text-white font-mono font-bold text-sm">{{ checklist.tempo_formatado }}</span>
+                </div>
+            </div>
+        </div>
+
+        {% if checklist.is_resolved %}
+        <!-- Resolution Badge -->
+        <div class="mb-6 bg-emerald-50 border-2 border-emerald-200 p-6 rounded-3xl flex items-center justify-between shadow-sm animate-in fade-in zoom-in duration-500">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <i data-lucide="check-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-emerald-900 font-black uppercase text-sm leading-none mb-1">Problema Resolvido</h3>
+                    <p class="text-emerald-700 text-[10px] font-bold uppercase tracking-tight">Manutenção e Verificação Concluídas</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] font-black text-emerald-800 uppercase leading-none mb-1">Resolvido por: {{ checklist.resolvido_por.get_full_name|default:checklist.resolvido_por.username }}</p>
+                <p class="text-[9px] font-bold text-emerald-600 uppercase">{{ checklist.data_resolucao|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+        {% elif checklist.has_nc %}
+        <!-- Alert Badge -->
+        <div class="mb-6 bg-rose-50 border-2 border-rose-100 p-6 rounded-3xl flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-rose-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-rose-900 font-black uppercase text-sm leading-none mb-1">Anomalias Pendentes</h3>
+                    <p class="text-rose-700 text-[10px] font-bold uppercase tracking-tight">O veículo possui itens não conformes</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 DetailSection">
+                <div class="bg-slate-50 px-6 py-3 border-b border-slate-100">
+                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Identificação do Veículo e Motorista</h3>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-2 gap-y-6 gap-x-4">
+                        {% include 'partials/info_item.html' with label='Placa Cavalo' value=checklist.placa_cavalo.placa icon='truck' %}
+                        {% include 'partials/info_item.html' with label='Motorista' value=checklist.nome_motorista.nome icon='user' %}
+                        {% include 'partials/info_item.html' with label='Placa Carreta 01' value=checklist.placa_carreta_01.placa|default:"-" %}
+                        {% include 'partials/info_item.html' with label='Placa Carreta 02' value=checklist.placa_carreta_02.placa|default:"-" %}
+                        {% include 'partials/info_item.html' with label='Tipo Equip.' value=checklist.tipo_equipamento %}
+                        {% include 'partials/info_item.html' with label='Doc. Carreta' value=checklist.doc_carreta_entregue|yesno:"ENTREGUE,NÃO ENTREGUE" %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 DetailSection h-full">
+                <div class="bg-slate-50 px-6 py-3 border-b border-slate-100">
+                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Anomalias e Observações</h3>
+                </div>
+                <div class="p-6 h-full">
+                    <div class="bg-slate-50 p-4 rounded-xl h-full border border-slate-100 min-h-[120px]">
+                        <p class="text-sm text-slate-700 whitespace-pre-wrap italic font-medium leading-relaxed">
+                            {{ checklist.anomalias|default:"Nenhuma observação ou anomalia registrada para este veículo." }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 font-bold uppercase tracking-tightest mt-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 DetailSection">
+                <div class="bg-slate-50 px-6 py-3 border-b border-slate-100"><h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Parte Elétrica</h3></div>
+                <div class="p-6">
+                    {% include 'partials/check_item.html' with label='Sist. em condições' value=checklist.eletrica_condicoes %}
+                    {% include 'partials/check_item.html' with label='Setas' value=checklist.eletrica_seta %}
+                    {% include 'partials/check_item.html' with label='Luz de Ré' value=checklist.eletrica_re %}
+                    {% include 'partials/check_item.html' with label='Luz de Freio' value=checklist.eletrica_freio %}
+                    {% include 'partials/check_item.html' with label='Capas Lanternas' value=checklist.eletrica_capas %}
+                    {% include 'partials/check_item.html' with label='Luz de Placa' value=checklist.eletrica_placa %}
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 DetailSection">
+                <div class="bg-slate-50 px-6 py-3 border-b border-slate-100"><h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Sistema Mecânico</h3></div>
+                <div class="p-6">
+                    {% include 'partials/check_item.html' with label='Freios Reg.' value=checklist.mecanica_freios %}
+                    {% include 'partials/check_item.html' with label='Conexões Engate' value=checklist.mecanica_conexoes %}
+                    {% include 'partials/check_item.html' with label='Folga 5ª Roda' value=checklist.mecanica_folga_quinta_roda %}
+                    {% include 'partials/check_item.html' with label='Suspensão' value=checklist.mecanica_suspensao %}
+                    {% include 'partials/check_item.html' with label='Travas Cont.' value=checklist.mecanica_travas_conteiner %}
+                    {% include 'partials/check_item.html' with label='Tampas Equip.' value=checklist.mecanica_tampas_equipamento %}
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 DetailSection">
+                <div class="bg-slate-50 px-6 py-3 border-b border-slate-100"><h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Rodas e Pneus</h3></div>
+                <div class="p-6">
+                    {% include 'partials/check_item.html' with label='Qtd. Pneus' value=checklist.rodas_pneus_quantidade %}
+                    {% include 'partials/check_item.html' with label='Step/Reserva' value=checklist.rodas_pneus_reserva %}
+                    {% include 'partials/check_item.html' with label='Estado Geral' value=checklist.rodas_pneus_estado %}
+                    {% include 'partials/check_item.html' with label='Cortes/Bolhas' value=checklist.rodas_pneus_cortes_bolhas %}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <!-- Asassinatura Responsavel -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 DetailSection">
+                <div class="bg-slate-50 px-6 py-3 border-b border-slate-100"><h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Assinatura Digital - Responsável</h3></div>
+                <div class="p-6">
+                    {% if checklist.visto_responsavel_saida %}
+                    <div class="flex flex-col gap-4">
+                        <div class="bg-white border border-slate-100 rounded-xl p-2 flex items-center justify-center">
+                            <img src="{{ checklist.visto_responsavel_saida }}" alt="Assinatura Responsável" class="max-h-40 w-auto" />
+                        </div>
+                        <div class="text-center border-t border-slate-50 pt-3">
+                            <p class="text-[10px] font-black text-slate-800 uppercase">{{ checklist.porteiro.get_full_name|default:checklist.porteiro.username }}</p>
+                            <p class="text-[9px] font-bold text-slate-400 font-mono">{{ checklist.porteiro.profile.cpf|default:'ADM SISTEMA' }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="flex flex-col items-center justify-center py-10 text-slate-400">
+                        <i data-lucide="alert-circle" class="w-8 h-8 mb-2 opacity-20"></i>
+                        <p class="text-xs italic">Sem assinatura digital registrada.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Assinatura Motorista -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 DetailSection">
+                <div class="bg-slate-50 px-6 py-3 border-b border-slate-100"><h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Assinatura Digital - Motorista</h3></div>
+                <div class="p-6">
+                    {% if checklist.visto_motorista_saida %}
+                    <div class="flex flex-col gap-4">
+                        <div class="bg-white border border-slate-100 rounded-xl p-2 flex items-center justify-center">
+                            <img src="{{ checklist.visto_motorista_saida }}" alt="Assinatura Motorista" class="max-h-40 w-auto" />
+                        </div>
+                        <div class="text-center border-t border-slate-50 pt-3">
+                            <p class="text-[10px] font-black text-slate-800 uppercase">{{ checklist.nome_motorista.nome }}</p>
+                            <p class="text-[9px] font-bold text-slate-400 font-mono">{{ checklist.nome_motorista.cpf }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="flex flex-col items-center justify-center py-10 text-slate-400">
+                        <i data-lucide="alert-circle" class="w-8 h-8 mb-2 opacity-20"></i>
+                        <p class="text-xs italic">Sem assinatura digital registrada.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div> <!-- Fim area tela -->
+
+    <!-- PAPER PRINT VIEW -->
+    <div class="hidden print:block text-black font-sans bg-white p-0">
+        <div class="border-2 border-black p-4 mb-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold uppercase">INTALOG - RELATÓRIO DE PORTARIA</h1>
+                <p class="text-xs">CHECKLIST DE ENTRADA E SAÍDA DE VEÍCULOS</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs font-bold">Nº REGISTRO: {{ checklist.id }}</p>
+                <p class="text-[10px]">DATA: {{ checklist.data_criacao|date:"d/m/Y H:i" }}</p>
+                <p class="text-[10px] font-bold">TEMPO EXEC: {{ checklist.tempo_formatado }}</p>
+                {% if checklist.is_resolved %}
+                <p class="text-[10px] font-black text-green-700 mt-1 uppercase">✅ RESOLVIDO EM: {{ checklist.data_resolucao|date:"d/m/Y H:i" }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if checklist.is_resolved %}
+        <div class="border-2 border-green-700 bg-green-50 p-2 mb-4 text-center">
+            <p class="text-[10px] font-black text-green-800 uppercase">
+                O PROBLEMA FOI CONSIDERADO RESOLVIDO POR: {{ checklist.resolvido_por.get_full_name|default:checklist.resolvido_por.username }} 
+                EM {{ checklist.data_resolucao|date:"d/m/Y H:i" }}
+            </p>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-2 gap-4 border-x-2 border-black px-4 py-2 bg-gray-100 border-y-2 mb-4">
+            <div class="space-y-1">
+                <p class="text-xs"><strong>PLACA CAVALO:</strong> {{ checklist.placa_cavalo.placa }}</p>
+                <p class="text-xs"><strong>MOTORISTA:</strong> {{ checklist.nome_motorista.nome }}</p>
+                <p class="text-xs"><strong>CPF:</strong> {{ checklist.nome_motorista.cpf }}</p>
+            </div>
+            <div class="space-y-1">
+                <p class="text-xs"><strong>CARRETAS:</strong> {{ checklist.placa_carreta_01.placa|default:"-" }} / {{ checklist.placa_carreta_02.placa|default:"-" }}</p>
+                <p class="text-xs"><strong>TIPO:</strong> {{ checklist.tipo_equipamento }}</p>
+                <p class="text-xs"><strong>DOC CARRETA:</strong> {{ checklist.doc_carreta_entregue|yesno:"SIM,NÃO" }}</p>
+            </div>
+        </div>
+
+        <div class="border-2 border-black p-4 mb-4">
+            <p class="text-xs font-bold mb-2 underline">ANOMALIAS E OBSERVAÇÕES:</p>
+            <p class="text-xs italic min-h-[40px]">{{ checklist.anomalias|default:"Nenhuma anomalia." }}</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-x-6 gap-y-0 text-[10px] uppercase border-2 border-black p-4">
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">1. ELÉTRICA COND.:</span><span class="text-[9px] font-black">{% if checklist.eletrica_condicoes == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_condicoes == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">2. SETAS:</span><span class="text-[9px] font-black">{% if checklist.eletrica_seta == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_seta == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">3. LUZ DE RÉ:</span><span class="text-[9px] font-black">{% if checklist.eletrica_re == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_re == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">4. LUZ DE FREIO:</span><span class="text-[9px] font-black">{% if checklist.eletrica_freio == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_freio == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">5. CAPAS LANTERNAS:</span><span class="text-[9px] font-black">{% if checklist.eletrica_capas == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_capas == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">6. LUZ DE PLACA:</span><span class="text-[9px] font-black">{% if checklist.eletrica_placa == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_placa == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">7. FREIOS REG.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_freios == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_freios == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">8. CONEXÕES ENG.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_conexoes == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_conexoes == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">9. FOLGA 5ª RODA:</span><span class="text-[9px] font-black">{% if checklist.mecanica_folga_quinta_roda == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_folga_quinta_roda == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">10. SUSPENSÃO:</span><span class="text-[9px] font-black">{% if checklist.mecanica_suspensao == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_suspensao == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">11. FREIO ESTAC.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_freio_estacionario == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_freio_estacionario == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">12. TRAVAS CONT.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_travas_conteiner == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_travas_conteiner == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">13. TAMPAS EQUIP.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_tampas_equipamento == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_tampas_equipamento == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">14. ESTADO TAMPAS:</span><span class="text-[9px] font-black">{% if checklist.mecanica_tampas_estado == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_tampas_estado == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">15. QTD PNEUS:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_quantidade == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_quantidade == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">16. STEP/RESERVA:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_reserva == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_reserva == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">17. ESTADO GERAL:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_estado == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_estado == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">18. CORTES/BOLHAS:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_cortes_bolhas == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_cortes_bolhas == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-12 mt-12 px-8">
+            <div class="text-center">
+                {% if checklist.visto_responsavel_saida %}
+                <img src="{{ checklist.visto_responsavel_saida }}" alt="Assinatura" class="max-h-12 mx-auto mb-1" />
+                {% else %}
+                <div class="h-12 border-b border-black mb-1"></div>
+                {% endif %}
+                <p class="text-[9px] font-bold border-t border-black pt-1 uppercase">RESPONSÁVEL: {{ checklist.porteiro.get_full_name|default:checklist.porteiro.username }}</p>
+            </div>
+            <div class="text-center">
+                {% if checklist.visto_motorista_saida %}
+                <img src="{{ checklist.visto_motorista_saida }}" alt="Assinatura" class="max-h-12 mx-auto mb-1" />
+                {% else %}
+                <div class="h-12 border-b border-black mb-1"></div>
+                {% endif %}
+                <p class="text-[9px] font-bold border-t border-black pt-1 uppercase">MOTORISTA: {{ checklist.nome_motorista.nome }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

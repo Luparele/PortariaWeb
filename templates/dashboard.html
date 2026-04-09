@@ -1,0 +1,621 @@
+{% extends 'base.html' %}
+
+{% block title %}Check-up & Manutenção - Dashboard{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js para gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8 animate-in fade-in duration-700 pb-20">
+  
+    <!-- Loading State -->
+    <div id="loadingState" class="flex flex-col items-center justify-center py-24">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent shadow-lg mb-4"></div>
+        <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Processando Painel...</p>
+    </div>
+
+    <div id="dashboardContent" class="hidden space-y-8">
+        <!-- 1. Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <div onclick="goToHistory()" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer">
+                <div class="absolute top-0 right-0 w-20 h-20 -mr-6 -mt-6 rounded-full opacity-5 bg-current text-blue-600"></div>
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 border transition-transform group-hover:rotate-12 bg-blue-50 text-blue-600 border-blue-100">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                </div>
+                <div id="stat-total" class="text-4xl font-black text-slate-900 leading-none mb-1 tracking-tighter">0</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Histórico</div>
+            </div>
+
+            <div onclick="goToAnomalies()" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer">
+                <div class="absolute top-0 right-0 w-20 h-20 -mr-6 -mt-6 rounded-full opacity-5 bg-current text-red-600"></div>
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 border transition-transform group-hover:rotate-12 bg-red-50 text-red-600 border-red-100">
+                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                </div>
+                <div id="stat-anomaliastotal" class="text-4xl font-black text-slate-900 leading-none mb-1 tracking-tighter">0</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Anomalias em Aberto</div>
+            </div>
+
+            <div onclick="goToToday()" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer">
+                <div class="absolute top-0 right-0 w-20 h-20 -mr-6 -mt-6 rounded-full opacity-5 bg-current text-indigo-600"></div>
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 border transition-transform group-hover:rotate-12 bg-indigo-50 text-indigo-600 border-indigo-100">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                </div>
+                <div id="stat-hoje" class="text-4xl font-black text-slate-900 leading-none mb-1 tracking-tighter">0</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Checklists Hoje</div>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all">
+                <div class="absolute top-0 right-0 w-20 h-20 -mr-6 -mt-6 rounded-full opacity-5 bg-current text-orange-600"></div>
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 border transition-transform group-hover:rotate-12 bg-orange-50 text-orange-600 border-orange-100">
+                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                </div>
+                <div id="stat-anomaliashoje" class="text-4xl font-black text-slate-900 leading-none mb-1 tracking-tighter">0</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Anomalias Hoje</div>
+            </div>
+
+        </div>
+        
+        <!-- KPIs de Tempo Médio -->
+        <div class="mb-8">
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                <i data-lucide="timer" class="w-3 h-3 text-indigo-500"></i>
+                Tempo Médio de Execução
+            </h3>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Portaria -->
+                <div class="bg-blue-600 p-5 rounded-3xl shadow-lg shadow-blue-100 flex flex-col justify-between h-32 relative overflow-hidden group hover:shadow-xl transition-all border border-white/10">
+                    <i data-lucide="shield-check" class="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500"></i>
+                    <span class="text-[10px] font-black text-blue-100/60 uppercase tracking-widest relative z-10">Entrada/Saída</span>
+                    <div class="mt-auto relative z-10">
+                        <span class="text-3xl font-black text-white tracking-tighter block leading-none mb-1">{{ averages.portaria }}</span>
+                        <span class="text-[9px] font-bold text-blue-100 uppercase tracking-tight opacity-70">Média por Checklist</span>
+                    </div>
+                </div>
+
+                <!-- Mnt Caminhão -->
+                <div class="bg-amber-500 p-5 rounded-3xl shadow-lg shadow-amber-100 flex flex-col justify-between h-32 relative overflow-hidden group hover:shadow-xl transition-all border border-white/10">
+                    <i data-lucide="truck" class="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500"></i>
+                    <span class="text-[10px] font-black text-white/60 uppercase tracking-widest relative z-10">Mnt. Caminhão</span>
+                    <div class="mt-auto relative z-10">
+                        <span class="text-3xl font-black text-white tracking-tighter block leading-none mb-1">{{ averages.truck }}</span>
+                        <span class="text-[9px] font-bold text-amber-100 uppercase tracking-tight opacity-70">Média por Checklist</span>
+                    </div>
+                </div>
+
+                <!-- Mnt Carreta -->
+                <div class="bg-slate-700 p-5 rounded-3xl shadow-lg shadow-slate-100 flex flex-col justify-between h-32 relative overflow-hidden group hover:shadow-xl transition-all border border-white/10">
+                    <i data-lucide="container" class="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500"></i>
+                    <span class="text-[10px] font-black text-white/40 uppercase tracking-widest relative z-10">Mnt. Carreta</span>
+                    <div class="mt-auto relative z-10">
+                        <span class="text-3xl font-black text-white tracking-tighter block leading-none mb-1">{{ averages.trailer }}</span>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight opacity-70">Média por Checklist</span>
+                    </div>
+                </div>
+
+                <!-- Empilhadeira -->
+                <div class="bg-indigo-600 p-5 rounded-3xl shadow-lg shadow-indigo-100 flex flex-col justify-between h-32 relative overflow-hidden group hover:shadow-xl transition-all border border-white/10">
+                    <i data-lucide="forklift" class="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500"></i>
+                    <span class="text-[10px] font-black text-indigo-100/60 uppercase tracking-widest relative z-10">Empilhadeira</span>
+                    <div class="mt-auto relative z-10">
+                        <span class="text-3xl font-black text-white tracking-tighter block leading-none mb-1">{{ averages.forklift }}</span>
+                        <span class="text-[9px] font-bold text-indigo-100 uppercase tracking-tight opacity-70">Média por Checklist</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Gráfico -->
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div>
+                    <h2 class="font-black text-2xl text-slate-800 tracking-tighter uppercase italic">Evolução de Anomalias</h2>
+                    <div class="flex bg-slate-100 p-1 rounded-xl mt-2 w-fit">
+                        <button onclick="updateChart('week')" id="btn-chart-week" class="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-white text-blue-600 shadow-sm">Semana</button>
+                        <button onclick="updateChart('month')" id="btn-chart-month" class="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-800">Mês</button>
+                        <button onclick="updateChart('year')" id="btn-chart-year" class="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-800">Ano</button>
+                    </div>
+                </div>
+            </div>
+            <div class="h-[300px] w-full" style="min-height: 300px;">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 3. Tabela -->
+        <div id="historico-detalhado" class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-8 border-b border-slate-100">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                    <h2 class="font-black text-2xl text-slate-800 tracking-tighter uppercase italic shrink-0">Histórico Detalhado</h2>
+
+                    <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                        <div class="relative flex-1 lg:w-64">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
+                            <input 
+                                type="text"
+                                id="searchInput"
+                                placeholder="BUSCAR PLACA, MOTORISTA..."
+                                class="w-full bg-slate-50 border-0 rounded-xl pl-10 pr-4 py-3 text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-300"
+                            />
+                        </div>
+                        
+                        <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                            <select id="typeFilter" class="bg-transparent border-0 text-[10px] font-black uppercase focus:ring-0 p-1 outline-none cursor-pointer text-slate-500">
+                                <option value="ALL">TODOS TIPOS</option>
+                                <option value="PORTARIA">PORTARIA</option>
+                                <option value="MNT_TRUCK">MNT CAMINHÃO</option>
+                                <option value="MNT_TRAILER">MNT CARRETA</option>
+                                <option value="FORKLIFT">EMPILHADEIRA</option>
+                            </select>
+                            <div class="w-px h-4 bg-slate-200"></div>
+                            <select id="anomalyFilter" class="bg-transparent border-0 text-[10px] font-black uppercase focus:ring-0 p-1 outline-none cursor-pointer text-slate-500">
+                                <option value="ALL">ANOMALIAS: TODAS</option>
+                                <option value="YES">COM ANOMALIA</option>
+                                <option value="NO">SEM ANOMALIA</option>
+                            </select>
+                            <div class="w-px h-4 bg-slate-200"></div>
+                            <select id="resolvedFilter" class="bg-transparent border-0 text-[10px] font-black uppercase focus:ring-0 p-1 outline-none cursor-pointer text-slate-500">
+                                <option value="ALL">RESOLVIDO: TODOS</option>
+                                <option value="YES">SIM</option>
+                                <option value="NO">NÃO</option>
+                                <option value="NA">N/A</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                            <input type="date" id="startDate" class="bg-transparent border-0 text-[10px] font-black uppercase focus:ring-0 p-1 outline-none" />
+                            <i data-lucide="arrow-right" class="text-slate-300 w-3 h-3"></i>
+                            <input type="date" id="endDate" class="bg-transparent border-0 text-[10px] font-black uppercase focus:ring-0 p-1 outline-none" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto min-h-[300px]">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <th class="px-8 py-5">Tipo</th>
+                            <th class="px-8 py-5">Veículo</th>
+                            <th class="px-8 py-5">Motorista</th>
+                            <th class="px-8 py-5">Data / Hora</th>
+                            <th class="px-8 py-5">Usuário</th>
+                            <th class="px-8 py-5 text-center">Anomalias</th>
+                            <th class="px-8 py-5 text-center">Resolvido</th>
+                            <th class="px-8 py-5"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-50">
+                        <!-- Itens renderizados via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Raw JSON Data from Django View -->
+<script id="data-portaria" type="application/json">{{ portaria_json|safe }}</script>
+<script id="data-truck" type="application/json">{{ truck_json|safe }}</script>
+<script id="data-trailer" type="application/json">{{ trailer_json|safe }}</script>
+<script id="data-forklift" type="application/json">{{ forklift_json|safe }}</script>
+
+<!-- Logica JS (Fidelidade ao React) -->
+<script>
+    // Utils constantes para calcular anomalias (igual ao React)
+    const TRUCK_MAINTENANCE_ITEMS = [
+        'cinto_seguranca', 'pneus_estado', 'rodas_estado', 'freio_perfeito', 'freio_estacionamento', 'direcao_estado', 
+        'limpador_parabrisa', 'instrumentos_painel', 'retrovisor_estado', 'buzina_funcionando', 'farol_funcionando', 
+        'setas_funcionando', 'alerta_funcionando', 'luz_alarme_re', 'luz_freio', 'extintor_vencimento', 'oleo_hidraulico', 
+        'oleo_freio', 'oleo_motor', 'correias_estado', 'agua_radiador', 'bateria_estado', 'escapamento_estado', 
+        'tampa_combustivel', 'macaco_hidraulico', 'bancos_limpeza', 'chave_triangulo', 'tacografo_disco', 'carroceria_estado'
+    ];
+    
+    const TRAILER_MAINTENANCE_ITEMS = [
+        'perfil_dianteiro', 'perfil_traseiro', 'perfil_lateral_dir', 'perfil_lateral_esq', 'freio_estacionamento', 
+        'alinhamento_eixos', 'parachoques', 'aparabarros', 'paralamas', 'pes_carreta', 'suspensor_1eixo', 'suspensor_2eixo', 
+        'alerta', 'setas', 'luz_freio', 'luz_re', 'luz_placa', 'lentes_laterais', 'pino_rei', 'sistema_pneumatico', 
+        'engate_eletrico', 'engates_pneumaticos', 'tampas_lat_dir', 'tampas_lat_esq', 'tampa_traseira', 'tampa_dianteira', 
+        'pinos_locke', 'faixas_refletivas', 'faixa_parachoques', 'suporte_estepe', 'suspensao_geral'
+    ];
+
+    const FORKLIFT_ITEMS = [
+        'mangueiras', 'pneus', 'pistao_elevacao', 'pistao_inclinacao', 'direcao', 'cabo_aco', 'parte_eletrica', 'corrente_torre', 'vazamento_oleo', 'pintura'
+    ];
+
+    let allData = [];
+    let myChartInstance = null;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        // Parse JSON
+        const rawPortaria = JSON.parse(document.getElementById('data-portaria').textContent || '[]');
+        const rawTruck = JSON.parse(document.getElementById('data-truck').textContent || '[]');
+        const rawTrailer = JSON.parse(document.getElementById('data-trailer').textContent || '[]');
+        const rawForklift = JSON.parse(document.getElementById('data-forklift').textContent || '[]');
+
+        // Mapear dados do backend
+        const portariaData = rawPortaria.map(item => ({
+            ...item,
+            tipo: 'PORTARIA',
+            hasAnomalias: item.has_nc,
+            isResolved: item.is_resolved
+        }));
+
+        const truckData = rawTruck.map(item => ({
+            ...item,
+            tipo: 'MNT_TRUCK',
+            hasAnomalias: item.has_nc,
+            isResolved: item.is_resolved
+        }));
+
+        const trailerData = rawTrailer.map(item => ({
+            ...item,
+            tipo: 'MNT_TRAILER',
+            hasAnomalias: item.has_nc,
+            isResolved: item.is_resolved
+        }));
+
+        const forkliftData = rawForklift.map(item => ({
+            ...item,
+            tipo: 'FORKLIFT',
+            hasAnomalias: item.has_nc,
+            isResolved: item.is_resolved
+        }));
+
+        allData = [...portariaData, ...truckData, ...trailerData, ...forkliftData].sort((a, b) => new Date(b.data_criacao) - new Date(a.data_criacao));
+
+        // Esconder loading, mostrar conteúdo
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('dashboardContent').classList.remove('hidden');
+
+        calculateStats();
+        updateChart('week');
+        renderTable();
+
+        // Bind events
+        document.getElementById('searchInput').addEventListener('input', renderTable);
+        document.getElementById('startDate').addEventListener('change', renderTable);
+        document.getElementById('endDate').addEventListener('change', renderTable);
+        document.getElementById('typeFilter').addEventListener('change', renderTable);
+        document.getElementById('anomalyFilter').addEventListener('change', renderTable);
+        document.getElementById('resolvedFilter').addEventListener('change', renderTable);
+        
+        // Render lucide icons again
+        lucide.createIcons();
+    });
+
+    function calculateStats() {
+        const total = allData.length;
+        const anomaliasAberto = allData.filter(i => i.hasAnomalias && !i.isResolved).length;
+        
+        const todayStr = new Date().toDateString();
+        const hojeLista = allData.filter(i => new Date(i.data_criacao).toDateString() === todayStr);
+        
+        document.getElementById('stat-total').innerText = total;
+        document.getElementById('stat-anomaliastotal').innerText = anomaliasAberto;
+        document.getElementById('stat-hoje').innerText = hojeLista.length;
+        document.getElementById('stat-anomaliashoje').innerText = hojeLista.filter(i => i.hasAnomalias).length;
+    }
+
+    function renderTable() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        const typeF = document.getElementById('typeFilter').value;
+        const anomalyF = document.getElementById('anomalyFilter').value;
+
+        const filtered = allData.filter(item => {
+            const placa = (item.placa_cavalo_detail?.placa || item.veiculo_detail?.placa || item.tipo_equipamento_display || '').toLowerCase();
+            const motorista = (item.nome_motorista_detail?.nome || item.motorista_detail?.nome || item.operador_detail?.nome || '').toLowerCase();
+            
+            const matchSearch = placa.includes(search) || motorista.includes(search);
+            
+            // Filtro de Tipo
+            const matchType = typeF === 'ALL' || item.tipo === typeF;
+
+            // Filtro de Anomalia
+            let matchAnomaly = true;
+            if (anomalyF === 'YES') matchAnomaly = item.hasAnomalias === true;
+            if (anomalyF === 'NO') matchAnomaly = item.hasAnomalias === false;
+
+            // Filtro de Resolvido
+            const resolvedF = document.getElementById('resolvedFilter').value;
+            let matchResolved = true;
+            if (resolvedF === 'YES') matchResolved = item.hasAnomalias && item.isResolved;
+            if (resolvedF === 'NO') matchResolved = item.hasAnomalias && !item.isResolved;
+            if (resolvedF === 'NA') matchResolved = !item.hasAnomalias;
+            
+            let matchStart = true;
+            let matchEnd = true;
+            
+            if (item.data_criacao) {
+                const itemDate = new Date(item.data_criacao);
+                itemDate.setHours(0,0,0,0);
+                
+                if (start) {
+                    const [y, m, d] = start.split('-').map(Number);
+                    const sLimit = new Date(y, m-1, d, 0,0,0);
+                    matchStart = itemDate >= sLimit;
+                }
+                if (end) {
+                    const [y, m, d] = end.split('-').map(Number);
+                    const eLimit = new Date(y, m-1, d, 0,0,0);
+                    matchEnd = itemDate <= eLimit;
+                }
+            }
+            return matchSearch && matchType && matchAnomaly && matchResolved && matchStart && matchEnd;
+        });
+
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="py-24 text-center">
+                        <div class="flex flex-col items-center gap-2 opacity-20">
+                            <i data-lucide="search" class="w-10 h-10"></i>
+                            <p class="text-sm font-black uppercase tracking-widest">Nenhum resultado</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            lucide.createIcons();
+            return;
+        }
+
+        filtered.forEach(item => {
+            const isPortaria = item.tipo === 'PORTARIA';
+            const isForklift = item.tipo === 'FORKLIFT';
+            const placa = item.placa_cavalo_detail?.placa || item.veiculo_detail?.placa || item.tipo_equipamento_display || 'S/P';
+            const motorista = item.nome_motorista_detail?.nome || item.motorista_detail?.nome || item.operador_detail?.nome || 'S/N';
+            
+            const dt = new Date(item.data_criacao);
+            const dataStr = dt.toLocaleDateString();
+            const horaStr = dt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            let urlItem = '#';
+            if (isPortaria) {
+                urlItem = `/portaria/${item.id}/`;
+            } else if (item.tipo === 'MNT_TRUCK') {
+                urlItem = `/manutencao/truck/${item.id}/`;
+            } else if (item.tipo === 'MNT_TRAILER') {
+                urlItem = `/manutencao/trailer/${item.id}/`;
+            } else if (isForklift) {
+                urlItem = `/forklift/${item.id}/`;
+            }
+            
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-blue-50/50 transition-all group cursor-default';
+
+            let typeBadgeClass = 'bg-amber-50 text-amber-600 border-amber-100';
+            let typeIcon = item.tipo === 'MNT_TRUCK' ? 'truck' : 'container';
+            let typeLabel = item.tipo === 'MNT_TRUCK' ? 'Mnt Caminhão' : 'Mnt Carreta';
+
+            if (isPortaria) {
+                typeBadgeClass = 'bg-blue-50 text-blue-600 border-blue-100';
+                typeIcon = 'shield-check';
+                typeLabel = 'Entrada/Saída';
+            } else if (isForklift) {
+                typeBadgeClass = 'bg-indigo-50 text-indigo-600 border-indigo-100';
+                typeIcon = 'forklift';
+                typeLabel = 'Empilhadeira';
+            }
+
+            tr.innerHTML = `
+                <td class="px-8 py-5">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase border ${typeBadgeClass}">
+                        <i data-lucide="${typeIcon}" class="w-3 h-3"></i>
+                        ${typeLabel}
+                    </span>
+                </td>
+                <td class="px-8 py-5">
+                    <span class="text-sm font-black text-slate-800 tracking-tighter uppercase">${placa}</span>
+                </td>
+                <td class="px-8 py-5 text-xs font-bold text-slate-600 uppercase truncate max-w-[200px]">${motorista}</td>
+                <td class="px-8 py-5">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black text-slate-800">${dataStr}</span>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase">${horaStr}</span>
+                    </div>
+                </td>
+                <td class="px-8 py-5 text-[10px] font-black text-slate-500 uppercase">${item.porteiro_name || item.responsavel_name || 'USUÁRIO'}</td>
+                <td class="px-8 py-5 text-center">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase ${item.hasAnomalias ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-green-100 text-green-600 border border-green-200'}">
+                        <i data-lucide="${item.hasAnomalias ? 'alert-triangle' : 'check-circle-2'}" class="w-3 h-3"></i>
+                        ${item.hasAnomalias ? 'S' : 'N'}
+                    </span>
+                </td>
+                <td class="px-8 py-5 text-center">
+                    ${item.hasAnomalias ? `
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase ${item.isResolved ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : 'bg-rose-100 text-rose-600 border border-rose-200'}">
+                            <i data-lucide="${item.isResolved ? 'check-check' : 'x-circle'}" class="w-3 h-3"></i>
+                            ${item.isResolved ? 'SIM' : 'NÃO'}
+                        </span>
+                    ` : `
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase bg-slate-100 text-slate-500 border border-slate-200">
+                            <i data-lucide="minus-circle" class="w-3 h-3"></i>
+                            N/A
+                        </span>
+                    `}
+                </td>
+                <td class="px-8 py-5 text-right">
+                    <a href="${urlItem}" class="bg-white border border-slate-200 text-slate-400 p-2 rounded-lg hover:text-blue-600 hover:border-blue-600 transition-all active:scale-90 inline-block">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                    </a>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        lucide.createIcons();
+    }
+
+    function goToAnomalies() {
+        // Rolar até o histórico
+        const element = document.getElementById('historico-detalhado');
+        element.scrollIntoView({ behavior: 'smooth' });
+        
+        // Aplicar filtros de pendência
+        document.getElementById('anomalyFilter').value = 'YES';
+        document.getElementById('resolvedFilter').value = 'NO';
+        
+        // Renderizar tabela com novos filtros
+        renderTable();
+    }
+
+    function goToHistory() {
+        // Rolar até o histórico
+        const element = document.getElementById('historico-detalhado');
+        element.scrollIntoView({ behavior: 'smooth' });
+        
+        // Resetar filtros para mostrar tudo
+        document.getElementById('anomalyFilter').value = 'ALL';
+        document.getElementById('resolvedFilter').value = 'ALL';
+        document.getElementById('typeFilter').value = 'ALL';
+        document.getElementById('searchInput').value = '';
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+        
+        // Renderizar tabela completa
+        renderTable();
+    }
+
+    function goToToday() {
+        // Rolar até o histórico
+        const element = document.getElementById('historico-detalhado');
+        element.scrollIntoView({ behavior: 'smooth' });
+        
+        // Calcular data de hoje em YYYY-MM-DD
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${y}-${m}-${d}`;
+        
+        // Aplicar filtros de hoje
+        document.getElementById('startDate').value = todayStr;
+        document.getElementById('endDate').value = todayStr;
+        
+        // Resetar outros filtros
+        document.getElementById('anomalyFilter').value = 'ALL';
+        document.getElementById('resolvedFilter').value = 'ALL';
+        document.getElementById('typeFilter').value = 'ALL';
+        document.getElementById('searchInput').value = '';
+        
+        // Renderizar tabela filtrada
+        renderTable();
+    }
+
+    function updateChart(range) {
+        document.getElementById('btn-chart-week').className = 'px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-800';
+        document.getElementById('btn-chart-month').className = 'px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-800';
+        document.getElementById('btn-chart-year').className = 'px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-800';
+        
+        document.getElementById(`btn-chart-${range}`).className = 'px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-white text-blue-600 shadow-sm';
+
+        let labels = [];
+        let dataTotal = [];
+        let dataAnomalias = [];
+
+        if (range === 'week') {
+            const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() - (6 - i));
+                const isoSearch = d.toDateString();
+                const dayFiltered = allData.filter(x => new Date(x.data_criacao).toDateString() === isoSearch);
+                
+                labels.push(days[d.getDay()]);
+                dataTotal.push(dayFiltered.length);
+                dataAnomalias.push(dayFiltered.filter(x => x.hasAnomalias).length);
+            }
+        } else if (range === 'month') {
+            // Replicando a lógica do react para mês
+            for (let i = 0; i < 10; i++) {
+                const start = new Date();
+                start.setHours(0,0,0,0);
+                start.setDate(start.getDate() - (27 - i*3));
+                const end = new Date(start);
+                end.setDate(end.getDate() + 2);
+                end.setHours(23,59,59,999);
+                
+                const filtered = allData.filter(x => {
+                    const dx = new Date(x.data_criacao);
+                    return dx >= start && dx <= end;
+                });
+                labels.push(`${start.getDate()}/${start.getMonth()+1}`);
+                dataTotal.push(filtered.length);
+                dataAnomalias.push(filtered.filter(x => x.hasAnomalias).length);
+            }
+        } else {
+            const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            for (let i = 0; i < 12; i++) {
+                const d = new Date();
+                const cm = new Date(d.getFullYear(), d.getMonth() - (11 - i), 1);
+                const mm = cm.getMonth();
+                const yy = cm.getFullYear();
+                
+                const filtered = allData.filter(x => {
+                    const dx = new Date(x.data_criacao);
+                    return dx.getMonth() === mm && dx.getFullYear() === yy;
+                });
+                labels.push(months[mm]);
+                dataTotal.push(filtered.length);
+                dataAnomalias.push(filtered.filter(x => x.hasAnomalias).length);
+            }
+        }
+
+        renderChart(labels, dataTotal, dataAnomalias);
+    }
+
+    function renderChart(labels, dataTotal, dataAnomalias) {
+        if (myChartInstance) myChartInstance.destroy();
+        const ctx = document.getElementById('myChart').getContext('2d');
+        myChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Checklists',
+                        data: dataTotal,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6,
+                        barPercentage: 0.5
+                    },
+                    {
+                        label: 'Anomalias',
+                        data: dataAnomalias,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 6,
+                        barPercentage: 0.5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        grid: {
+                            color: '#f1f5f9',
+                            borderDash: [3, 3]
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { boxWidth: 8, usePointStyle: true, font: {size: 10, weight: 'bold'}, color: '#1e293b' }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

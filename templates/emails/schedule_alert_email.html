@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; }
+        .header { background-color: #2563eb; color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+        .content { padding: 30px; background-color: #ffffff; }
+        .footer { padding: 20px; text-align: center; font-size: 11px; color: #94a3b8; }
+        .vehicle-box { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .placa { font-size: 24px; font-weight: 800; color: #1e293b; margin: 0; }
+        .label { font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; }
+        .status { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #f59e0b; color: #fff; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 14px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin:0; font-size: 20px; text-transform: uppercase; letter-spacing: 0.05em;">Agenda de Manutenção</h1>
+        </div>
+        <div class="content">
+            <p>Olá,</p>
+            <p>Um novo agendamento de manutenção foi registrado no sistema <strong>Check-up & Manutenção</strong>.</p>
+            
+            <div class="vehicle-box">
+                <div style="margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                    <span class="status">Agendado</span>
+                    <p style="font-size: 10px; font-weight: 800; color: #ef4444; text-transform: uppercase; margin-top: 10px;">
+                        ⚠️ IMPORTANTE: O veículo deverá ser removido da escala de operações nas datas selecionadas.
+                    </p>
+                </div>
+                <p class="label">Veículo</p>
+                <p class="placa">{{ schedule.veiculo.placa }}</p>
+                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">{{ schedule.veiculo.get_tipo_display }}</p>
+                
+                <hr style="border:0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+                
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="width: 50%;">
+                            <p class="label">Paralização</p>
+                            <p style="font-weight: 700;">{{ schedule.data_paralizacao|date:"d/m/Y" }}</p>
+                        </td>
+                        <td>
+                            <p class="label">Previsão Liberação</p>
+                            <p style="font-weight: 700; color: #2563eb;">{{ schedule.data_previsao_liberacao|date:"d/m/Y" }}</p>
+                        </td>
+                    </tr>
+                </table>
+                
+                <p class="label" style="margin-top: 20px;">Descrição do Serviço</p>
+                <p style="font-style: italic; color: #475569;">"{{ schedule.descricao }}"</p>
+            </div>
+
+            <p style="font-size: 12px;">Registrado por: <strong>{{ schedule.criado_por.get_full_name|default:schedule.criado_por.username }}</strong> em {{ schedule.data_criacao|date:"d/m/Y H:i" }}</p>
+
+            <div style="text-align: center;">
+                <a href="{{ site_url }}{% url 'agenda_manutencao' %}" class="btn">Visualizar na Agenda</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>© {{ now|date:"Y" }} Intalog Logística Transportes Ltda<br>Check-up & Manutenção Hub</p>
+        </div>
+    </div>
+</body>
+</html>

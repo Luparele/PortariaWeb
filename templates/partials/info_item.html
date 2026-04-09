@@ -1,0 +1,9 @@
+<div class="flex items-start gap-3">
+    {% if icon %}
+    <div class="mt-1 text-slate-400"><i data-lucide="{{ icon }}" class="w-4 h-4"></i></div>
+    {% endif %}
+    <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight leading-none mb-1">{{ label }}</p>
+        <p class="text-sm font-bold text-slate-800 break-words">{{ value|default:"-" }}</p>
+    </div>
+</div>

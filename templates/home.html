@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Check-up & Manutenção - Home Hub{% endblock %}
+
+{% block content %}
+<div class="animate-in fade-in duration-700 pb-20">
+    
+    <!-- Hero Hub Header -->
+    <div class="relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-10 mb-12 shadow-2xl border-b-4 border-blue-500">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl"></div>
+        
+        <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+            <div class="text-center md:text-left">
+                <div class="inline-flex items-center gap-2 bg-blue-500/20 px-3 py-1 rounded-full border border-blue-400/30 mb-4">
+                    <span class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
+                    <span class="text-[10px] font-black text-blue-300 uppercase tracking-widest">Sistema Ativo</span>
+                </div>
+                <h1 class="text-4xl md:text-5xl font-black text-white italic tracking-tighter leading-none mb-3">
+                    Olá, <span class="text-blue-400">{{ request.user.get_full_name|default:request.user.username }}</span>
+                </h1>
+                <p class="text-slate-400 font-medium text-lg max-w-md">Bem-vindo à central operacional Check-up & Manutenção. Selecione uma atividade abaixo para começar.</p>
+                
+                <div class="mt-6 flex flex-wrap justify-center md:justify-start gap-4">
+                    <div class="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-blue-400"></i>
+                        <span class="text-[10px] font-black text-white/60 uppercase tracking-widest">{{ request.user.profile.get_role_display }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                        <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
+                        <span class="text-[10px] font-black text-white/60 uppercase tracking-widest">{% now "d \d\e F, Y" %}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="relative group">
+                <div class="absolute inset-0 bg-blue-500 rounded-3xl blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                <div class="relative w-32 h-32 bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl border border-white/20 flex items-center justify-center shadow-2xl">
+                    <i data-lucide="user-check" class="w-16 h-16 text-blue-400"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Access Matrix -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- SECTION: OPERAÇÃO PORTARIA -->
+        {% if request.user.profile.role == 'ADMIN' or request.user.profile.role == 'GESTOR' or request.user.profile.role == 'CONTROLADOR' %}
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-blue-100/80 text-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="shield-check" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Checklist Portaria</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Registre a entrada e saída de veículos e vistorie as condições básicas de segurança.</p>
+                <a href="{% url 'portaria_create' %}" class="flex items-center justify-between bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-200 transition-all">
+                    Iniciar agora
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- SECTION: MANUTENÇÃO -->
+        {% if request.user.profile.role == 'ADMIN' or request.user.profile.role == 'GESTOR' or request.user.profile.role == 'MANUTENCAO' %}
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-amber-100/80 text-amber-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="truck" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Manut. Caminhão</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Inspeção técnica detalhada de cavalos mecânicos e verificação de sistemas.</p>
+                <a href="{% url 'maintenance_create' 'truck' %}" class="flex items-center justify-between bg-amber-500 hover:bg-amber-600 text-slate-900 p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-amber-200 transition-all">
+                    Iniciar agora
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="container" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Manut. Carreta</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Vistoria de implementos, carretas e bugs com foco em estrutura e sinalização.</p>
+                <a href="{% url 'maintenance_create' 'trailer' %}" class="flex items-center justify-between bg-slate-900 hover:bg-black text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-slate-300 transition-all">
+                    Iniciar agora
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- SECTION: AGENDA DE MANUTENÇÃO -->
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="calendar-days" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Agenda de Manutenção</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Cronograma preventivo, calendário de paralização e linha do tempo da frota.</p>
+                <a href="{% url 'agenda_manutencao' %}" class="flex items-center justify-between bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-200 transition-all">
+                    Abrir Agenda
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- SECTION: EMPILHADEIRA -->
+        {% if request.user.profile.role != 'PUBLICO' %}
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-indigo-100/80 text-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="forklift" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Checklist Empilhadeira</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Inspeção diária de empilhadeiras (Mila, Asa Delta e Hyster) e check de segurança.</p>
+                <a href="{% url 'forklift_create' %}" class="flex items-center justify-between bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-200 transition-all">
+                    Iniciar agora
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- SECTION: GESTÃO (RESTRICTED) -->
+        {% if request.user.profile.role == 'ADMIN' or request.user.profile.role == 'GESTOR' %}
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-blue-50 text-blue-600 border border-blue-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="layout-dashboard" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Dashboard Geral</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Visualize indicadores operacionais, anomalias e gráficos de desempenho.</p>
+                <a href="{% url 'dashboard' %}" class="flex items-center justify-between bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all">
+                    Acessar Painel
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden md:col-span-2 lg:col-span-1">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-red-50 text-red-600 border border-red-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="settings" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Administração</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Gerencie usuários, veículos, motoristas e configurações críticas do sistema.</p>
+                <div class="flex gap-2">
+                    <a href="{% url 'system_admin' %}" class="flex-1 bg-red-600 hover:bg-red-700 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[9px] shadow-lg shadow-red-200 transition-all text-center">
+                        Configurações
+                    </a>
+                    <a href="/admin/" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[9px] shadow-lg shadow-slate-200 transition-all text-center">
+                        Django Admin
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

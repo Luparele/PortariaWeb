@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; }
+        .header { background: #4338ca; color: #ffffff; padding: 40px 30px; text-align: center; }
+        .content { padding: 40px 30px; }
+        .alert-badge { background: #fee2e2; color: #dc2626; padding: 6px 14px; border-radius: 100px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; display: inline-block; }
+        h1 { margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; letter-spacing: -1px; }
+        .info-card { background: #f1f5f9; padding: 20px; border-radius: 16px; margin-bottom: 30px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        .label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; }
+        .value { font-size: 14px; font-weight: 700; color: #1e293b; text-align: right; }
+        .nc-list { margin-top: 20px; }
+        .nc-item { background: #fff1f2; border-left: 4px solid #ef4444; padding: 12px; margin-bottom: 10px; border-radius: 0 8px 8px 0; }
+        .footer { background: #1e293b; color: #94a3b8; padding: 30px; text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+        .btn { display: inline-block; background: #4338ca; color: #ffffff; padding: 16px 30px; border-radius: 12px; text-decoration: none; font-weight: 800; text-transform: uppercase; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="alert-badge">Alerta de Manutenção</div>
+            <h1>Anomalia Detectada</h1>
+        </div>
+        <div class="content">
+            <div class="info-card">
+                <div class="info-row" style="display: block;">
+                    <div class="label">Equipamento</div>
+                    <div class="value" style="text-align: left;">{{ instance.get_tipo_equipamento_display }}</div>
+                </div>
+                <div class="info-row" style="display: block; margin-top: 10px;">
+                    <div class="label">Operador</div>
+                    <div class="value" style="text-align: left;">{{ instance.operador.nome }}</div>
+                </div>
+                <div class="info-row" style="display: block; margin-top: 10px;">
+                    <div class="label">Responsável pela Verificação</div>
+                    <div class="value" style="text-align: left;">{{ instance.responsavel.get_full_name|default:instance.responsavel.username }}</div>
+                </div>
+                <div class="info-row" style="display: block; margin-top: 10px;">
+                    <div class="label">Data/Hora</div>
+                    <div class="value" style="text-align: left;">{{ now|date:"d/m/Y H:i" }}</div>
+                </div>
+            </div>
+
+            {% if items_nc %}
+            <div class="nc-list">
+                <h3 class="label">Itens Não Conformes</h3>
+                {% for item in items_nc %}
+                <div class="nc-item">
+                    <strong>{{ item.label }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if instance.observacoes %}
+            <div style="margin-top: 30px; padding: 20px; border-radius: 16px; background: #fffbeb; border: 1px solid #fef3c7;">
+                <h3 class="label" style="color: #b45309;">Observações Técnicas</h3>
+                <p style="font-size: 14px; font-weight: 600; font-style: italic; color: #92400e; margin: 5px 0 0 0;">"{{ instance.observacoes }}"</p>
+            </div>
+            {% endif %}
+
+            <center>
+                <a href="{{ site_url }}/forklift/{{ instance.id }}/" class="btn">Visualizar Checklist Completo</a>
+            </center>
+        </div>
+        <div class="footer">
+            SISTEMA CHECK-UP & MANUTENÇÃO • ALERTA AUTOMÁTICO
+        </div>
+    </div>
+</body>
+</html>

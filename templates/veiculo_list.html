@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Check-up & Manutenção - Gestão de Veículos{% endblock %}
+
+{% block content %}
+<div class="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="bg-slate-900 p-8 rounded-3xl mb-8 flex flex-col md:flex-row justify-between items-center border-b-4 border-emerald-500 shadow-2xl overflow-hidden relative">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+        <div class="relative z-10">
+            <h2 class="text-3xl font-black text-white italic tracking-tighter uppercase">Gestão de Veículos</h2>
+            <p class="text-emerald-400 text-xs font-black tracking-widest mt-1 uppercase italic leading-none">Cadastro e Controle de Frota</p>
+        </div>
+        <div class="relative z-10 flex items-center gap-4 mt-6 md:mt-0">
+            <button onclick="toggleModal('modalNovoVeiculo')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-2xl font-black text-xs uppercase transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 italic tracking-widest">
+                <i data-lucide="truck" class="w-4 h-4"></i> Novo Registro
+            </button>
+            <a href="{% url 'dashboard' %}" class="bg-white/10 hover:bg-white/20 p-4 rounded-2xl text-white transition-all active:scale-95 group">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Mensagens Django -->
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="p-4 rounded-xl text-sm font-bold uppercase tracking-wide flex items-center gap-3 shadow-md {% if message.tags == 'error' %}bg-red-50 text-red-600 border border-red-200{% else %}bg-green-50 text-green-600 border border-green-200{% endif %}">
+            <i data-lucide="{% if message.tags == 'error' %}alert-circle{% else %}check-circle{% endif %}" class="w-5 h-5"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Tabela -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-50 relative">
+            <i data-lucide="search" class="absolute left-7 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
+            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="BUSCAR POR PLACA OU MODELO..." class="w-full bg-slate-50 border-0 rounded-xl pl-12 pr-4 py-3 text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-emerald-500 outline-none" />
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left" id="veiculosTable">
+                <thead>
+                    <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">
+                        <th class="px-6 py-4 text-center">Tipo</th>
+                        <th class="px-6 py-4">Placa</th>
+                        <th class="px-6 py-4">Modelo</th>
+                        <th class="px-6 py-4 text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for v in veiculos %}
+                    <tr class="hover:bg-slate-50/50 transition-colors list-item-row">
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-2 py-1 text-[10px] uppercase font-black tracking-widest rounded-md border 
+                                {% if v.tipo == 'CAVALO' %}bg-slate-100 text-slate-600 border-slate-200
+                                {% else %}bg-indigo-50 text-indigo-600 border-indigo-200{% endif %}">
+                                {{ v.get_tipo_display }}
+                            </span>
+                            <span class="hidden item-tipo">{{ v.tipo }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-slate-800 uppercase item-placa">{{ v.placa }}</td>
+                        <td class="px-6 py-4 text-xs font-bold text-slate-500 uppercase item-modelo">{{ v.modelo|default:"-" }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <form method="post" action="{% url 'veiculo_list' %}" onsubmit="return confirm('Deseja excluir este veículo?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="{{ v.id }}">
+                                <button type="submit" class="text-slate-300 hover:text-red-500 transition-colors p-2 rounded hover:bg-red-50">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="py-12 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest opacity-30">Nenhum veículo encontrado</td>
+                    </tr>
+                    {% endfor %}
+                    <tr id="noResultsRow" class="hidden">
+                        <td colspan="4" class="py-12 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest opacity-30">Busca sem resultados</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Novo -->
+    <div id="modalNovoVeiculo" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl transform scale-95 opacity-0 transition-all duration-300" id="modalContent">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="font-black uppercase italic text-slate-800 tracking-tight text-xl">Cadastrar Veículo</h3>
+                <button type="button" onclick="toggleModal('modalNovoVeiculo')" class="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 p-2 rounded-full transition-all">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <form method="post" action="{% url 'veiculo_list' %}" class="p-6 space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create">
+                
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Tipo de Veículo</label>
+                    <div class="grid grid-cols-2 gap-2 mt-1">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="tipo" value="CAVALO" class="peer sr-only" checked>
+                            <div class="text-center p-3 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-500 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:border-slate-800 transition-all">Cavalo</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="tipo" value="CARRETA" class="peer sr-only">
+                            <div class="text-center p-3 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-500 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:border-slate-800 transition-all">Carreta</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Placa</label>
+                    <input required name="placa" id="placaInput" placeholder="AAA-0000" type="text" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 uppercase font-bold text-sm tracking-widest outline-none transition-all mt-1" />
+                </div>
+                
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Modelo / Detalhes</label>
+                    <input name="modelo" type="text" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 font-bold uppercase text-sm text-slate-600 outline-none transition-all mt-1" />
+                </div>
+                
+                <div class="pt-4">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4"></i> Salvar Veículo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Filtro JS
+    function filterTable() {
+        const input = document.getElementById("searchInput");
+        const filter = input.value.toUpperCase();
+        const rows = document.querySelectorAll(".list-item-row");
+        let foundAny = false;
+
+        rows.forEach(row => {
+            const placa = row.querySelector(".item-placa").innerText.toUpperCase();
+            const modelo = row.querySelector(".item-modelo").innerText.toUpperCase();
+            const tipo = row.querySelector(".item-tipo").innerText.toUpperCase();
+            if (placa.includes(filter) || modelo.includes(filter) || tipo.includes(filter)) {
+                row.style.display = "";
+                foundAny = true;
+            } else {
+                row.style.display = "none";
+            }
+        });
+
+        document.getElementById("noResultsRow").classList.toggle("hidden", foundAny || rows.length === 0);
+    }
+
+    // Modal
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        const content = modal.querySelector('#modalContent');
+        if (modal.classList.contains('hidden')) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        } else {
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+    }
+
+    // Máscara Placa Mercosul/Velha Vanilla JS
+    document.getElementById('placaInput').addEventListener('input', function(e) {
+        let value = e.target.value.toUpperCase();
+        value = value.replace(/[^A-Z0-9]/g, '');
+        if (value.length > 3) {
+            value = value.substring(0, 3) + '-' + value.substring(3, 7);
+        }
+        e.target.value = value;
+    });
+</script>
+{% endblock %}

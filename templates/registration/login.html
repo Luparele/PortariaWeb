@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-up & Manutenção - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50">
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200 border border-slate-100 overflow-hidden">
+            <div class="bg-blue-900 p-8 text-center text-white">
+                <img src="/static/img/logo.png" alt="INTALOG" class="h-16 mx-auto mb-4 brightness-0 invert" />
+            </div>
+            
+            <form method="post" action="{% url 'login' %}" class="p-8 space-y-6">
+                {% csrf_token %}
+                
+                {% if form.errors %}
+                <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
+                    Usuário ou senha inválidos.
+                </div>
+                {% endif %}
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-2">Usuário</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
+                        <input 
+                            type="text"
+                            name="username"
+                            class="w-full bg-slate-50 border-0 rounded-xl px-10 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-900 font-bold uppercase"
+                            placeholder="Seu usuário"
+                            oninput="this.value = this.value.toUpperCase()"
+                            required
+                        />
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-2">Senha</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
+                        <input 
+                            type="password"
+                            name="password"
+                            id="password-field"
+                            class="w-full bg-slate-50 border-0 rounded-xl px-10 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-900 pr-12"
+                            placeholder="••••••••"
+                            required
+                        />
+                        <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                            <i data-lucide="eye" id="eye-icon" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <input type="hidden" name="next" value="{{ next|default:'/' }}" />
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-all active:scale-95">
+                    Entrar no Sistema
+                </button>
+                
+                <div class="text-center pt-2">
+                    <p class="text-slate-400 text-xs">Acesso restrito para funcionários autorizados</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function togglePassword() {
+            var pwd = document.getElementById('password-field');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+            } else {
+                pwd.type = 'password';
+            }
+        }
+    </script>
+</body>
+</html>
