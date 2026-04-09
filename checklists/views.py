@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Count, Avg, Q
-from django.core.mail import send_mail
+from django.core.mail import send_mail, get_connection
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
@@ -22,6 +22,24 @@ from .models import (
 from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS, PORTARIA_ITEMS, FORKLIFT_ITEMS
 
 # --- HELPER FUNCTIONS ---
+
+def _get_email_connection():
+    """Returns a dynamic SMTP connection based on EmailConfig from database"""
+    config = EmailConfig.objects.first()
+    if not config:
+        return None, settings.DEFAULT_FROM_EMAIL
+        
+    password = config.get_decrypted_password()
+    connection = get_connection(
+        host=config.host,
+        port=config.port,
+        username=config.user,
+        password=password,
+        use_tls=config.use_tls,
+        use_ssl=config.use_ssl,
+        timeout=10
+    )
+    return connection, config.default_from or settings.DEFAULT_FROM_EMAIL
 
 def _send_telegram_message(message):
     """
@@ -44,14 +62,37 @@ def _send_telegram_message(message):
         payload = {
             'chat_id': contact.chat_id,
             'text': message,
-            'parse_mode': 'Markdown'
+            'parse_mode': 'HTML'
         }
         try:
-            response = requests.post(url, json=payload, timeout=10)
-            if response.status_code != 200:
-                print(f"Erro Telegram ({contact.nome}): {response.text}")
+            requests.post(url, json=payload, timeout=10)
         except Exception as e:
-            print(f"Erro ao conectar com Telegram: {e}")
+            print(f"Erro ao enviar para {contact.nome}: {e}")
+
+def _send_single_telegram_message(chat_id, message):
+    """Sends a message to a specific chat_id"""
+    config = TelegramConfig.objects.first()
+    if not config:
+        return False
+    
+    bot_token = config.get_decrypted_token()
+    if not bot_token:
+        return False
+        
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        'chat_id': chat_id,
+        'text': message,
+        'parse_mode': 'HTML'
+    }
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code != 200:
+            print(f"Erro Telegram ({chat_id}): {response.status_code} - {response.text}")
+        return response.status_code == 200
+    except Exception as e:
+        print(f"Erro ao enviar mensagem simples: {e}")
+        return False
 
 def _send_portaria_anomaly_email(checklist, request=None):
     """Standalone function to send Portaria anomaly alerts (replaces legacy ViewSet method)"""
@@ -80,10 +121,11 @@ def _send_portaria_anomaly_email(checklist, request=None):
     html_message = render_to_string('emails/portaria_anomaly_email.html', context)
     plain_message = strip_tags(html_message)
     
+    connection, from_email = _get_email_connection()
     try:
-        send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, emails, html_message=html_message, fail_silently=False)
+        send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
     except Exception as e:
-        pass # Log error if needed
+        print(f"Erro ao enviar e-mail Portaria: {e}")
 
 def _send_maintenance_alert(instance, veiculo_tipo, request=None):
     """Standalone function to send Maintenance alerts"""
@@ -113,10 +155,11 @@ def _send_maintenance_alert(instance, veiculo_tipo, request=None):
     html_message = render_to_string('emails/maintenance_anomaly_email.html', context)
     plain_message = strip_tags(html_message)
 
+    connection, from_email = _get_email_connection()
     try:
-        send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, emails, html_message=html_message, fail_silently=False)
+        send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
     except Exception as e:
-        pass
+        print(f"Erro ao enviar e-mail Manutenção: {e}")
 
 def _send_forklift_anomaly_email(instance, request=None):
     """Standalone function to send Forklift anomaly alerts"""
@@ -151,10 +194,11 @@ def _send_forklift_anomaly_email(instance, request=None):
     html_message = render_to_string('emails/forklift_anomaly_email.html', context)
     plain_message = strip_tags(html_message)
 
+    connection, from_email = _get_email_connection()
     try:
-        send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, emails, html_message=html_message, fail_silently=False)
+        send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
     except Exception as e:
-        pass
+        print(f"Erro ao enviar e-mail Empilhadeira: {e}")
 
 def _send_schedule_alerts(schedule, request=None):
     """Send Email and WhatsApp alerts for new maintenance schedules"""
@@ -170,9 +214,12 @@ def _send_schedule_alerts(schedule, request=None):
         }
         html_message = render_to_string('emails/schedule_alert_email.html', context)
         plain_message = strip_tags(html_message)
+        
+        connection, from_email = _get_email_connection()
         try:
-            send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, emails, html_message=html_message, fail_silently=False)
-        except Exception: pass
+            send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
+        except Exception as e:
+            print(f"Erro ao enviar e-mail Agenda: {e}")
 
     # 2. Telegram Alerts
     msg = f"🛠️ *NOVO AGENDAMENTO DE MANUTENÇÃO*\n\n"
@@ -681,13 +728,34 @@ def system_admin_view(request):
                 return redirect('system_admin')
             
             token = request.POST.get('bot_token')
+            link = request.POST.get('bot_link')
             config, created = TelegramConfig.objects.get_or_create(id=1)
             if token:
                 config.bot_token = token
-                config.save()
-                messages.success(request, 'Token do Telegram atualizado com sucesso!')
+            if link is not None:
+                config.bot_link = link
+            config.save()
+            messages.success(request, 'Configurações do Telegram atualizadas com sucesso!')
+            
+        elif action == 'test_telegram_single':
+            chat_id = request.POST.get('chat_id')
+            nome = request.POST.get('nome')
+            msg = f"<b>🚀 TESTE DE CONEXÃO</b>\n\nOlá {nome}, esta é uma mensagem de teste do sistema PortariaWeb.\n\n⚠️ <i>Por favor, não responda a esta mensagem.</i>"
+            
+            # Improved diagnostics
+            config = TelegramConfig.objects.first()
+            if not config:
+                messages.error(request, 'Configuração do Bot do Telegram não encontrada. Por favor, cadastre o Token.')
+                return redirect('system_admin')
+                
+            success = _send_single_telegram_message(chat_id, msg)
+            if success:
+                messages.success(request, f'Mensagem de teste enviada com sucesso para {nome}!')
             else:
-                messages.error(request, 'Token não fornecido.')
+                # We can't easily capture the error and pass it up without changing helper signature, 
+                # but we've already added a print in the console. 
+                # For the user, let's give more specific advice.
+                messages.error(request, f'Falha ao enviar para {nome}. Motivos prováveis: 1. Token incorreto; 2. O usuário não iniciou o bot; 3. ID do chat inválido.')
             
         return redirect('system_admin')
 
@@ -861,13 +929,15 @@ def _send_status_update_alerts(schedule, request):
                 'advise_checklist': schedule.status == 'CONCLUIDO'
             })
             
+            connection, from_email = _get_email_connection()
             try:
                 send_mail(
                     subject,
                     "",
-                    settings.EMAIL_HOST_USER,
+                    from_email,
                     list(emails),
-                    html_message=html_content
+                    html_message=html_content,
+                    connection=connection
                 )
             except Exception as e:
                 print(f"Error sending status email: {e}")

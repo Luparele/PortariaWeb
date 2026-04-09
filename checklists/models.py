@@ -487,6 +487,7 @@ class EmailConfig(models.Model):
 
 class TelegramConfig(models.Model):
     bot_token = models.CharField(max_length=500) # Will store encrypted string
+    bot_link = models.URLField(max_length=200, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -509,7 +510,7 @@ class TelegramConfig(models.Model):
                 pass
         
         if should_encrypt:
-            self.bot_token = encrypt_password(self.bot_token)
+            self.bot_token = encrypt_password(self.bot_token.strip())
             
         super().save(*args, **kwargs)
 

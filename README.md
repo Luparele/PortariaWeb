@@ -31,7 +31,9 @@ O projeto foi concebido com foco na **eficiência operacional** e no uso em camp
 
 ### Banco de Dados & Serviços
 - **SQLite3**: Banco de dados padrão para desenvolvimento e operações locais ágeis.
-- **Email & WhatsApp Integration**: Disparo automatizado de alertas para gestores quando anomalias são detectadas.
+- **Email & Telegram Integration**: Disparo automatizado de alertas para gestores.
+- **Criptografia AES (Fernet)**: Proteção de credenciais sensíveis (SMTP/Telegram) no banco de dados.
+- **Gestão Dinâmica de Configuração**: Painel administrativo para configuração rápida de servidores de e-mail e bots de notificação sem alteração de código.
 
 ---
 
@@ -56,6 +58,11 @@ O projeto foi concebido com foco na **eficiência operacional** e no uso em camp
 
 5.  **Dashboard Administrativo**:
     *   Visão consolidada de métricas operacionais, heatmap de anomalias e estatísticas de uso.
+
+6.  **Central de Segurança e Notificações**:
+    *   **Configuração Globais de E-mail (SMTP)**: Interface para cadastro de servidores Provedores (Outlook, Gmail, etc).
+    *   **Integração Nativa Telegram**: Gestão de Tokens de Bot e links de convite com função de cópia rápida.
+    *   **Gestão de Destinatários**: Controle granular de quem recebe alertas por tipo de evento (Agenda, Portaria, Manutenção).
 
 ---
 
