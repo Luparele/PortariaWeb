@@ -291,6 +291,68 @@
                         </div>
                     </div>
                 </div>
+                <!-- CONFIGURAÇÃO SMTP -->
+                <div class="p-8 pt-0 border-t border-slate-50">
+                    <div class="bg-slate-50 rounded-3xl p-6 mt-8">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                            <div>
+                                <h3 class="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
+                                    <i data-lucide="settings" class="text-slate-500"></i>
+                                    Configuração Global de E-mail
+                                </h3>
+                                <p class="text-slate-600/60 text-[10px] font-black uppercase tracking-widest leading-none">Servidor SMTP e Credenciais</p>
+                            </div>
+                        </div>
+
+                        <form method="post" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="update_smtp">
+                            
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Servidor SMTP</label>
+                                <input type="text" name="host" value="{{ email_config.host|default:'email-ssl.com.br' }}" class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold uppercase tracking-widest focus:ring-2 focus:ring-slate-900 transition-all outline-none" required>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Porta</label>
+                                <input type="number" name="port" value="{{ email_config.port|default:465 }}" class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold uppercase tracking-widest focus:ring-2 focus:ring-slate-900 transition-all outline-none" required>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail (Usuário)</label>
+                                <input type="email" name="user" value="{{ email_config.user }}" class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold tracking-widest focus:ring-2 focus:ring-slate-900 transition-all outline-none" required>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
+                                <input type="password" name="password" placeholder="••••••••" class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold tracking-widest focus:ring-2 focus:ring-slate-900 transition-all outline-none">
+                                <p class="text-[9px] text-slate-400 ml-1">Deixe em branco para manter a atual</p>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Remetente</label>
+                                <input type="email" name="default_from" value="{{ email_config.default_from }}" placeholder="[REDACTED_EMAIL]" class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold tracking-widest focus:ring-2 focus:ring-slate-900 transition-all outline-none" required>
+                            </div>
+
+                            <div class="flex items-center gap-6 pt-6">
+                                <label class="flex items-center gap-2 cursor-pointer group">
+                                    <input type="checkbox" name="use_tls" {% if email_config.use_tls %}checked{% endif %} class="w-5 h-5 rounded-lg border-slate-300 text-slate-900 focus:ring-slate-900">
+                                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-900 transition-colors">USAR TLS</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer group">
+                                    <input type="checkbox" name="use_ssl" {% if email_config.use_ssl %}checked{% endif %} class="w-5 h-5 rounded-lg border-slate-300 text-slate-900 focus:ring-slate-900">
+                                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-900 transition-colors">USAR SSL</span>
+                                </label>
+                            </div>
+
+                            <div class="col-span-full pt-4">
+                                <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white p-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-slate-200 transition-all active:scale-[0.98]">
+                                    Salvar Configurações de E-mail
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- User Register (Novo Operador) -->

@@ -13,7 +13,11 @@ from datetime import datetime
 import json
 import requests
 from django.core.serializers.json import DjangoJSONEncoder
-from .models import Checklist, Profile, AlertEmail, Condutor, Veiculo, MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, MaintenanceSchedule, AlertTelegram, MaintenanceStatusLog
+from .models import (
+    Checklist, Profile, AlertEmail, Condutor, Veiculo, 
+    MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, 
+    MaintenanceSchedule, AlertTelegram, MaintenanceStatusLog, EmailConfig
+)
 from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS, PORTARIA_ITEMS, FORKLIFT_ITEMS
 
 # --- HELPER FUNCTIONS ---
@@ -634,6 +638,27 @@ def system_admin_view(request):
                     else:
                         messages.error(request, f'Erro ao criar usuário: {err_msg}')
                     
+        elif action == 'update_smtp':
+            host = request.POST.get('host')
+            port = request.POST.get('port')
+            user = request.POST.get('user')
+            password = request.POST.get('password')
+            use_tls = request.POST.get('use_tls') == 'on'
+            use_ssl = request.POST.get('use_ssl') == 'on'
+            default_from = request.POST.get('default_from')
+            
+            config, created = EmailConfig.objects.get_or_create(id=1)
+            config.host = host
+            config.port = int(port) if port else 465
+            config.user = user
+            if password: # Update only if password is provided
+                config.password = password
+            config.use_tls = use_tls
+            config.use_ssl = use_ssl
+            config.default_from = default_from
+            config.save()
+            messages.success(request, 'Configurações de SMTP atualizadas com sucesso!')
+            
         return redirect('system_admin')
 
     context = {
@@ -642,6 +667,7 @@ def system_admin_view(request):
         'emails_agenda': AlertEmail.objects.filter(category='AGENDA').order_by('email'),
         'telegrams': AlertTelegram.objects.all().order_by('nome'),
         'users': User.objects.all().select_related('profile').order_by('-date_joined')[:15],
+        'email_config': EmailConfig.objects.first(),
     }
     return render(request, 'system_admin.html', context)
 

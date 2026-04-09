@@ -444,3 +444,38 @@ class MaintenanceStatusLog(models.Model):
 
     def __str__(self):
         return f"{self.get_new_status_display()} em {self.created_at.strftime('%d/%m/%y %H:%M')}"
+
+class EmailConfig(models.Model):
+    host = models.CharField(max_length=255, default='email-ssl.com.br')
+    port = models.IntegerField(default=465)
+    user = models.EmailField(max_length=255)
+    password = models.CharField(max_length=500)  # Will store encrypted string
+    use_tls = models.BooleanField(default=False)
+    use_ssl = models.BooleanField(default=True)
+    default_from = models.EmailField(max_length=255)
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuração de E-mail"
+        verbose_name_plural = "Configurações de E-mail"
+
+    def __str__(self):
+        return f"Config SMTP: {self.user}"
+
+    def save(self, *args, **kwargs):
+        # Encrypt password before saving if it's not already encrypted 
+        from .utils import encrypt_password
+        
+        if self.pk:
+            old_obj = EmailConfig.objects.get(pk=self.pk)
+            if self.password != old_obj.password:
+                self.password = encrypt_password(self.password)
+        else:
+            self.password = encrypt_password(self.password)
+            
+        super().save(*args, **kwargs)
+
+    def get_decrypted_password(self):
+        from .utils import decrypt_password
+        return decrypt_password(self.password)

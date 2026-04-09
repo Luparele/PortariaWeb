@@ -123,12 +123,13 @@ STATICFILES_DIRS = [
 # Internationalization settings below...
 
 # Email Configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'email-ssl.com.br'
+EMAIL_BACKEND = 'checklists.backends.DynamicEmailBackend'
+# Credenciais SMTP removidas para segurança (Gerenciadas via Painel Admin)
+EMAIL_HOST = ''
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
-EMAIL_HOST_USER = '[REDACTED_EMAIL]'
-EMAIL_HOST_PASSWORD = '[REDACTED_PASSWORD]'
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
 DEFAULT_FROM_EMAIL = '[REDACTED_EMAIL]'
 
 LOGIN_REDIRECT_URL = '/'
