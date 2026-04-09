@@ -260,7 +260,8 @@ def _send_schedule_alerts(schedule, request=None):
             print(f"Erro ao enviar e-mail Agenda: {e}")
 
     # 2. Telegram Alerts
-    msg = f"🛠️ *NOVO AGENDAMENTO DE MANUTENÇÃO*\n\n"
+    msg = f"<b>🚛 NOVO AGENDAMENTO DE MANUTENÇÃO</b>\n"
+    msg += f"<i>Central Operacional Check-up & Manutenção - Intalog</i>\n\n"
     msg += f"Placa: {schedule.veiculo.placa}\n"
     msg += f"Início: {schedule.data_paralizacao.strftime('%d/%m/%Y %H:%M')}\n"
     msg += f"Previsão: {schedule.data_previsao_liberacao.strftime('%d/%m/%Y %H:%M')}\n"
@@ -788,7 +789,7 @@ def system_admin_view(request):
         elif action == 'test_telegram_single':
             chat_id = request.POST.get('chat_id')
             nome = request.POST.get('nome')
-            msg = f"<b>🚀 TESTE DE CONEXÃO</b>\n\nOlá {nome}, esta é uma mensagem de teste do sistema PortariaWeb.\n\n⚠️ <i>Por favor, não responda a esta mensagem.</i>"
+            msg = f"<b>🚀 TESTE DE CONEXÃO</b>\n\nOlá {nome}, esta é uma mensagem de teste da <b>Central Operacional Check-up & Manutenção - Intalog</b>.\n\n⚠️ <i>Por favor, não responda a esta mensagem.</i>"
             
             # Improved diagnostics
             config = TelegramConfig.objects.first()
@@ -991,7 +992,8 @@ def _send_status_update_alerts(schedule, request):
                 print(f"Error sending status email: {e}")
 
         # Telegram Logic
-        msg = f"🔔 *ATUALIZAÇÃO DE MANUTENÇÃO*\n\n"
+        msg = f"<b>🔔 ATUALIZAÇÃO DE MANUTENÇÃO</b>\n"
+        msg += f"<i>Central Operacional Check-up & Manutenção - Intalog</i>\n\n"
         msg += f"Veículo: {schedule.veiculo.placa}\n"
         msg += f"Situação: {schedule.get_status_display().upper()}\n"
         msg += f"Descrição: {schedule.descricao}\n\n"
