@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from .models import Checklist, Profile, Condutor, Veiculo, AlertEmail, MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, MaintenanceSchedule, AlertTelegram
+from .models import Checklist, Profile, Condutor, Veiculo, AlertEmail, MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, MaintenanceSchedule, AlertTelegram, EmailConfig, TelegramConfig
 
 class ProfileInline(admin.StackedInline):
     model = Profile
@@ -70,3 +70,7 @@ class AlertTelegramAdmin(admin.ModelAdmin):
     list_display = ('nome', 'chat_id', 'ativo', 'created_at')
     list_filter = ('ativo',)
     search_fields = ('nome', 'chat_id')
+
+@admin.register(EmailConfig)
+class EmailConfigAdmin(admin.ModelAdmin):
+    list_display = ('user', 'host', 'port', 'updated_at')

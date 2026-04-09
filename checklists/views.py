@@ -16,22 +16,31 @@ from django.core.serializers.json import DjangoJSONEncoder
 from .models import (
     Checklist, Profile, AlertEmail, Condutor, Veiculo, 
     MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, 
-    MaintenanceSchedule, AlertTelegram, MaintenanceStatusLog, EmailConfig
+    MaintenanceSchedule, AlertTelegram, MaintenanceStatusLog, 
+    EmailConfig, TelegramConfig
 )
 from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS, PORTARIA_ITEMS, FORKLIFT_ITEMS
 
 # --- HELPER FUNCTIONS ---
 
 def _send_telegram_message(message):
-    """Helper to send a message to all active Telegram contacts"""
-    token = getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
-    if not token or token == 'YOUR_BOT_TOKEN_HERE':
-        print("TELEGRAM_BOT_TOKEN não configurado.")
+    """
+    Sends a message to all active contacts in the AlertTelegram model
+    using the bot token from the database.
+    """
+    config = TelegramConfig.objects.first()
+    if not config:
+        print("Telegram configuration missing in database.")
+        return
+
+    bot_token = config.get_decrypted_token()
+    if not bot_token:
+        print("Telegram bot token is empty.")
         return
 
     contacts = AlertTelegram.objects.filter(ativo=True)
     for contact in contacts:
-        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {
             'chat_id': contact.chat_id,
             'text': message,
@@ -639,6 +648,10 @@ def system_admin_view(request):
                         messages.error(request, f'Erro ao criar usuário: {err_msg}')
                     
         elif action == 'update_smtp':
+            if not request.user.is_superuser:
+                messages.error(request, 'Apenas superusuários podem alterar configurações de SMTP.')
+                return redirect('system_admin')
+            
             host = request.POST.get('host')
             port = request.POST.get('port')
             user = request.POST.get('user')
@@ -649,7 +662,10 @@ def system_admin_view(request):
             
             config, created = EmailConfig.objects.get_or_create(id=1)
             config.host = host
-            config.port = int(port) if port else 465
+            try:
+                config.port = int(port) if port else 465
+            except (ValueError, TypeError):
+                config.port = 465
             config.user = user
             if password: # Update only if password is provided
                 config.password = password
@@ -658,6 +674,20 @@ def system_admin_view(request):
             config.default_from = default_from
             config.save()
             messages.success(request, 'Configurações de SMTP atualizadas com sucesso!')
+            
+        elif action == 'update_telegram':
+            if not request.user.is_superuser:
+                messages.error(request, 'Apenas superusuários podem alterar configurações do Telegram.')
+                return redirect('system_admin')
+            
+            token = request.POST.get('bot_token')
+            config, created = TelegramConfig.objects.get_or_create(id=1)
+            if token:
+                config.bot_token = token
+                config.save()
+                messages.success(request, 'Token do Telegram atualizado com sucesso!')
+            else:
+                messages.error(request, 'Token não fornecido.')
             
         return redirect('system_admin')
 
@@ -668,6 +698,7 @@ def system_admin_view(request):
         'telegrams': AlertTelegram.objects.all().order_by('nome'),
         'users': User.objects.all().select_related('profile').order_by('-date_joined')[:15],
         'email_config': EmailConfig.objects.first(),
+        'telegram_config': TelegramConfig.objects.first(),
     }
     return render(request, 'system_admin.html', context)
 

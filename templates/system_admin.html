@@ -2,6 +2,14 @@
 
 {% block title %}Check-up & Manutenção - Administração do Sistema{% endblock %}
 
+{% block extra_head %}
+<!-- Alpine.js for interactivity -->
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="space-y-12 animate-in slide-in-from-bottom-6 duration-700 pb-20 max-w-6xl mx-auto">
     <!-- 1. Header Administrativo -->
@@ -292,19 +300,37 @@
                     </div>
                 </div>
                 <!-- CONFIGURAÇÃO SMTP -->
-                <div class="p-8 pt-0 border-t border-slate-50">
+                {% if user.is_superuser %}
+                <div class="p-8 pt-0 border-t border-slate-50" x-data="{ editing: false }">
                     <div class="bg-slate-50 rounded-3xl p-6 mt-8">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6" :class="editing ? 'mb-8' : ''">
                             <div>
                                 <h3 class="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
                                     <i data-lucide="settings" class="text-slate-500"></i>
                                     Configuração Global de E-mail
                                 </h3>
-                                <p class="text-slate-600/60 text-[10px] font-black uppercase tracking-widest leading-none">Servidor SMTP e Credenciais</p>
+                                <div class="flex items-center gap-4 mt-1">
+                                    <p class="text-slate-600/60 text-[10px] font-black uppercase tracking-widest leading-none">Servidor SMTP e Credenciais</p>
+                                    <button @click="editing = !editing" class="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full hover:bg-slate-100 transition-colors shadow-sm">
+                                        <i data-lucide="pencil" class="w-3 h-3 text-indigo-500"></i>
+                                        <span class="text-[9px] font-black text-slate-900 uppercase tracking-widest" x-text="editing ? 'CANCELAR' : 'EDITAR'">EDITAR</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Resumo quando não estiver editando -->
+                            <div x-show="!editing" class="flex items-center gap-3 bg-white/50 border border-slate-200 px-4 py-2 rounded-2xl">
+                                <div class="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="mail" class="w-4 h-4 text-indigo-500"></i>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">E-mail Ativo</p>
+                                    <p class="text-xs font-bold text-slate-900 truncate max-w-[200px]">{{ email_config.user|default:'NÃO CONFIGURADO' }}</p>
+                                </div>
                             </div>
                         </div>
 
-                        <form method="post" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <form method="post" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8" x-show="editing" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform -translate-y-4" x-transition:enter-end="opacity-100 transform translate-y-0">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="update_smtp">
                             
@@ -331,7 +357,7 @@
 
                             <div class="space-y-2">
                                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Remetente</label>
-                                <input type="email" name="default_from" value="{{ email_config.default_from }}" placeholder="[REDACTED_EMAIL]" class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold tracking-widest focus:ring-2 focus:ring-slate-900 transition-all outline-none" required>
+                                <input type="email" name="default_from" value="{{ email_config.default_from }}" placeholder="security@intalog.com.br" class="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold tracking-widest focus:ring-2 focus:ring-slate-900 transition-all outline-none" required>
                             </div>
 
                             <div class="flex items-center gap-6 pt-6">
@@ -353,6 +379,59 @@
                         </form>
                     </div>
                 </div>
+                {% endif %}
+
+                <!-- CONFIGURAÇÃO TELEGRAM -->
+                {% if user.is_superuser %}
+                <div class="p-8 pt-0 border-t border-slate-50" x-data="{ editing: false }">
+                    <div class="bg-indigo-50/30 rounded-3xl p-6 mt-8 border border-indigo-100/50">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6" :class="editing ? 'mb-8' : ''">
+                            <div>
+                                <h3 class="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
+                                    <i data-lucide="send" class="text-indigo-500"></i>
+                                    Configuração do Bot do Telegram
+                                </h3>
+                                <div class="flex items-center gap-4 mt-1">
+                                    <p class="text-slate-600/60 text-[10px] font-black uppercase tracking-widest leading-none">Token da API do Telegram</p>
+                                    <button @click="editing = !editing" class="flex items-center gap-2 px-3 py-1 bg-white border border-indigo-200 rounded-full hover:bg-indigo-50 transition-colors shadow-sm">
+                                        <i data-lucide="pencil" class="w-3 h-3 text-indigo-500"></i>
+                                        <span class="text-[9px] font-black text-slate-900 uppercase tracking-widest" x-text="editing ? 'CANCELAR' : 'EDITAR'">EDITAR</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Resumo quando não estiver editando -->
+                            <div x-show="!editing" class="flex items-center gap-3 bg-white/80 border border-indigo-100 px-4 py-2 rounded-2xl">
+                                <div class="w-8 h-8 bg-indigo-500/10 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="bot" class="w-4 h-4 text-indigo-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">Status Interno</p>
+                                    <p class="text-xs font-bold text-slate-900">{% if telegram_config %}TOKEN CONFIGURADO 🔐{% else %}AGUARDANDO CONFIGURAÇÃO ⚠️{% endif %}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form method="post" class="space-y-6 mt-8" x-show="editing" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform -translate-y-4" x-transition:enter-end="opacity-100 transform translate-y-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="update_telegram">
+                            
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Token do Bot (HTTP API)</label>
+                                <div class="relative group">
+                                    <i data-lucide="key" class="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+                                    <input type="password" name="bot_token" placeholder="••••••••••••••••••••••••••••••••" class="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-5 py-4 text-xs font-bold tracking-widest focus:ring-2 focus:ring-indigo-500 transition-all outline-none">
+                                </div>
+                                <p class="text-[9px] text-slate-400 ml-1">Para garantir a segurança, o token atual não é exibido. Deixe em branco para mantê-lo.</p>
+                            </div>
+
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 transition-all active:scale-[0.98]">
+                                Atualizar Token do Telegram
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- User Register (Novo Operador) -->

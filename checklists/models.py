@@ -467,11 +467,16 @@ class EmailConfig(models.Model):
         # Encrypt password before saving if it's not already encrypted 
         from .utils import encrypt_password
         
+        should_encrypt = True
         if self.pk:
-            old_obj = EmailConfig.objects.get(pk=self.pk)
-            if self.password != old_obj.password:
-                self.password = encrypt_password(self.password)
-        else:
+            try:
+                old_obj = EmailConfig.objects.get(pk=self.pk)
+                if self.password == old_obj.password:
+                    should_encrypt = False
+            except EmailConfig.DoesNotExist:
+                pass
+        
+        if should_encrypt:
             self.password = encrypt_password(self.password)
             
         super().save(*args, **kwargs)
@@ -479,3 +484,35 @@ class EmailConfig(models.Model):
     def get_decrypted_password(self):
         from .utils import decrypt_password
         return decrypt_password(self.password)
+
+class TelegramConfig(models.Model):
+    bot_token = models.CharField(max_length=500) # Will store encrypted string
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuração do Telegram"
+        verbose_name_plural = "Configurações do Telegram"
+
+    def __str__(self):
+        return "Configuração do Bot do Telegram"
+
+    def save(self, *args, **kwargs):
+        from .utils import encrypt_password
+        
+        should_encrypt = True
+        if self.pk:
+            try:
+                old_obj = TelegramConfig.objects.get(pk=self.pk)
+                if self.bot_token == old_obj.bot_token:
+                    should_encrypt = False
+            except TelegramConfig.DoesNotExist:
+                pass
+        
+        if should_encrypt:
+            self.bot_token = encrypt_password(self.bot_token)
+            
+        super().save(*args, **kwargs)
+
+    def get_decrypted_token(self):
+        from .utils import decrypt_password
+        return decrypt_password(self.bot_token)

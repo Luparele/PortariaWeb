@@ -136,5 +136,7 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 LOGIN_URL = '/login/'
 
-# Telegram Integration
-TELEGRAM_BOT_TOKEN = 'YOUR_BOT_TOKEN_HERE'
+# Login redirect settings
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = '/login/'
