@@ -87,7 +87,7 @@
     {% endif %}
 
     <!-- Ferramentas Rápidas e Admin -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4">
         <a 
             href="/admin/" 
             target="_blank" 
@@ -99,16 +99,6 @@
             </div>
             <i data-lucide="settings" class="text-white w-8 h-8 group-hover:rotate-90 transition-transform duration-500"></i>
         </a>
-
-        <div class="p-6 bg-indigo-50 rounded-3xl border border-indigo-100 flex items-center gap-4">
-            <div class="bg-indigo-600 p-3 rounded-2xl text-white">
-                <i data-lucide="info" class="w-6 h-6"></i>
-            </div>
-            <div>
-                <p class="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-0.5 leading-none">Dica de Administração</p>
-                <p class="text-xs text-indigo-900 font-black uppercase italic tracking-tight">O login gerado é automático: NOME.SOBRENOME</p>
-            </div>
-        </div>
     </div>
 
     <!-- Container Principal (Alertas e Usuários) -->
@@ -316,9 +306,22 @@
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="bg-slate-900 p-8 relative overflow-hidden group">
                     <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-                    <div class="relative z-10">
-                        <h3 class="text-2xl font-black text-white italic tracking-tighter uppercase mb-1">Novo Operador do Sistema</h3>
-                        <p class="text-indigo-400 text-[10px] font-black uppercase tracking-widest leading-none italic">Cadastro Rápido de Usuários</p>
+                    <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <h3 class="text-2xl font-black text-white italic tracking-tighter uppercase mb-1">Novo Operador do Sistema</h3>
+                            <p class="text-indigo-400 text-[10px] font-black uppercase tracking-widest leading-none italic">Cadastro Rápido de Usuários</p>
+                        </div>
+
+                        <!-- Dica Admin Realocada -->
+                        <div class="flex items-center gap-4 bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md">
+                            <div class="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center border border-indigo-500/30">
+                                <i data-lucide="info" class="text-indigo-400 w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5 leading-none">Dica Admin</p>
+                                <p class="text-[10px] text-white font-black uppercase italic tracking-tight">Login automático: NOME.SOBRENOME</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
