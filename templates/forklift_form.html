@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    <form method="POST" id="forkliftForm" class="relative">
+    <form method="POST" id="forkliftForm" class="relative" enctype="multipart/form-data">
         {% csrf_token %}
         <!-- Hidden input for time -->
         <input type="hidden" name="tempo_execucao" id="tempo_execucao_val" value="0">
@@ -111,10 +111,68 @@
     
         <!-- OBSERVAÇÕES -->
         <div class="mb-8">
-            <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-l-4 border-amber-500 pl-3 bg-slate-50 py-3 rounded-r-xl italic">OBSERVAÇÕES E ANOMALIAS</h3>
+            <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-l-4 border-amber-500 pl-3 bg-slate-50 py-3 rounded-r-xl italic">OBSERVAÇÕES E RELATÓRIO FOTOGRÁFICO</h3>
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Detalhamento</label>
-                <textarea name="observacoes" id="observacoes_text" placeholder="Descreva aqui qualquer anomalia ou observação importante..." class="w-full bg-slate-50 border-0 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 min-h-[150px] font-bold text-sm text-slate-700 h-[200px] outline-none transition-all resize-y"></textarea>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Detalhamento das Anomalias</label>
+                <textarea name="observacoes" id="observacoes_text" placeholder="Descreva aqui qualquer anomalia ou observação importante..." class="w-full bg-slate-50 border-0 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-indigo-500 min-h-[100px] font-bold text-sm text-slate-700 h-[150px] outline-none transition-all resize-y mb-6"></textarea>
+                
+                <div class="border-t border-slate-100 pt-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800 uppercase tracking-tight">Relatório Fotográfico</h4>
+                            <p class="text-[10px] text-slate-400 font-medium">Capture fotos de avarias encontradas (opcional)</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="openCamera()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-100 transition-all active:scale-95">
+                                <i data-lucide="camera" class="w-4 h-4"></i>
+                                TIRAR FOTO
+                            </button>
+                            <button type="button" onclick="document.getElementById('photoInput').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all active:scale-95">
+                                <i data-lucide="upload" class="w-4 h-4"></i>
+                                GALERIA/ARQUIVOS
+                            </button>
+                        </div>
+                        <input type="file" id="photoInput" name="photos" accept="image/*" multiple class="hidden" onchange="handlePhotos(this)">
+                    </div>
+
+                    <!-- Photo Preview Grid -->
+                    <div id="photoPreview" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        <!-- Preview Items will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Modal -->
+        <div id="cameraModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+            <div class="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Câmera ao Vivo</h3>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Capture a evidência diretamente</p>
+                    </div>
+                    <button type="button" onclick="closeCamera()" class="w-10 h-10 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-all">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                
+                <div class="relative bg-black aspect-square sm:aspect-video flex items-center justify-center overflow-hidden">
+                    <video id="cameraStream" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <canvas id="cameraCanvas" class="hidden"></canvas>
+                    
+                    <!-- Flash Effect Overlay -->
+                    <div id="cameraFlash" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-100"></div>
+                </div>
+                
+                <div class="p-8 bg-slate-50 flex flex-col items-center gap-6">
+                    <button type="button" onclick="takePhoto()" class="w-20 h-20 bg-white border-8 border-indigo-500 rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all group">
+                        <div class="w-12 h-12 bg-indigo-500 rounded-full group-hover:bg-indigo-600 transition-colors"></div>
+                    </button>
+                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest">Pressione para Capturar</p>
+                </div>
+            </div>
+        </div>
+                </div>
             </div>
         </div>
     
@@ -181,6 +239,116 @@
 <script>
     let startTime;
     let timerInterval;
+    let cameraStream = null;
+    let currentDataTransfer = new DataTransfer();
+
+    function openCamera() {
+        const modal = document.getElementById('cameraModal');
+        const video = document.getElementById('cameraStream');
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        })
+        .then(stream => {
+            cameraStream = stream;
+            video.srcObject = stream;
+        })
+        .catch(err => {
+            console.error("Erro ao acessar câmera:", err);
+            alert("Não foi possível acessar a câmera. Certifique-se de dar as permissões necessárias ou use a opção 'Galeria/Arquivos'.");
+            closeCamera();
+        });
+    }
+
+    function closeCamera() {
+        const modal = document.getElementById('cameraModal');
+        const video = document.getElementById('cameraStream');
+        
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        
+        video.srcObject = null;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function takePhoto() {
+        const video = document.getElementById('cameraStream');
+        const canvas = document.getElementById('cameraCanvas');
+        const flash = document.getElementById('cameraFlash');
+        
+        // Flash Effect
+        flash.classList.remove('opacity-0');
+        flash.classList.add('opacity-100');
+        setTimeout(() => flash.classList.replace('opacity-100', 'opacity-0'), 100);
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob(blob => {
+            const file = new File([blob], `forklift_capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            currentDataTransfer.items.add(file);
+            document.getElementById('photoInput').files = currentDataTransfer.files;
+            addPhotoToPreview(file);
+        }, 'image/jpeg', 0.85);
+    }
+
+    function handlePhotos(input) {
+        const files = Array.from(input.files);
+        files.forEach(file => {
+            currentDataTransfer.items.add(file);
+            addPhotoToPreview(file);
+        });
+        input.files = currentDataTransfer.files;
+    }
+
+    function addPhotoToPreview(file) {
+        const preview = document.getElementById('photoPreview');
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const id = Math.random().toString(36).substr(2, 9);
+            const div = document.createElement('div');
+            div.className = "relative aspect-square group animate-in zoom-in duration-300";
+            div.id = `preview-${id}`;
+            div.innerHTML = `
+                <img src="${e.target.result}" class="w-full h-full object-cover rounded-xl border border-slate-200 shadow-sm">
+                <button type="button" onclick="removePhoto('${id}', '${file.name}')" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                </button>
+            `;
+            preview.appendChild(div);
+            lucide.createIcons();
+        }
+        reader.readAsDataURL(file);
+    }
+
+    function removePhoto(id, fileName) {
+        const el = document.getElementById(`preview-${id}`);
+        el.className += " zoom-out fade-out duration-300";
+        setTimeout(() => el.remove(), 300);
+        
+        const newDataTransfer = new DataTransfer();
+        const files = document.getElementById('photoInput').files;
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].name !== fileName) {
+                newDataTransfer.items.add(files[i]);
+            }
+        }
+        currentDataTransfer = newDataTransfer;
+        document.getElementById('photoInput').files = currentDataTransfer.files;
+    }
 
     function startChecklist() {
         startTime = Date.now();

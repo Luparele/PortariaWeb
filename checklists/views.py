@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -13,15 +14,52 @@ from datetime import datetime
 import json
 import requests
 from django.core.serializers.json import DjangoJSONEncoder
+from django.contrib.contenttypes.models import ContentType
+from django.core.files.base import ContentFile
+import io
+import os
+import zipfile
+from PIL import Image
 from .models import (
     Checklist, Profile, AlertEmail, Condutor, Veiculo, 
     MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, 
     MaintenanceSchedule, AlertTelegram, MaintenanceStatusLog, 
-    EmailConfig, TelegramConfig
+    EmailConfig, TelegramConfig, ChecklistPhoto
 )
 from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS, PORTARIA_ITEMS, FORKLIFT_ITEMS
 
 # --- HELPER FUNCTIONS ---
+
+def _process_and_save_photo(obj, photo_file):
+    """Resizes, compresses and saves a photo for a given object"""
+    try:
+        img = Image.open(photo_file)
+        
+        # Convert RGBA to RGB if necessary
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+            
+        # Resize if too large (Max 1200px width/height)
+        max_size = (1200, 1200)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Compress
+        output = io.BytesIO()
+        img.save(output, format='JPEG', quality=75, optimize=True)
+        output.seek(0)
+        
+        # Create ChecklistPhoto
+        ct = ContentType.objects.get_for_model(obj)
+        photo_obj = ChecklistPhoto(
+            content_type=ct,
+            object_id=obj.id
+        )
+        # Use simple name
+        photo_obj.file.save('photo.jpg', ContentFile(output.read()), save=True)
+        return True
+    except Exception as e:
+        print(f"Erro ao processar imagem: {e}")
+        return False
 
 def _get_email_connection():
     """Returns a dynamic SMTP connection based on EmailConfig from database"""
@@ -372,6 +410,11 @@ def portaria_create_view(request):
                 tempo_execucao=int(request.POST.get('tempo_execucao', 0)) or None,
             )
             checklist.save()
+
+            # Handle Photos
+            photos = request.FILES.getlist('photos')
+            for f in photos:
+                _process_and_save_photo(checklist, f)
             
             # Enviar e-mail de anomalia se existir
             if checklist.anomalias and checklist.anomalias.strip():
@@ -504,6 +547,11 @@ def forklift_create_view(request):
                 setattr(instance, item['id'], request.POST.get(item['id'], 'NA'))
                 
             instance.save()
+
+            # Handle Photos
+            photos = request.FILES.getlist('photos')
+            for f in photos:
+                _process_and_save_photo(instance, f)
             
             # Anomaly logic
             has_nc = any(getattr(instance, item['id']) == 'NAO' for item in items)
@@ -1024,10 +1072,54 @@ def resolve_checklist_view(request, checklist_type, pk):
             checklist.resolvido_por = request.user
             checklist.data_resolucao = timezone.now()
             checklist.save()
+
+            # Delete related photos as per rule
+            ct = ContentType.objects.get_for_model(checklist)
+            photos = ChecklistPhoto.objects.filter(content_type=ct, object_id=checklist.id)
+            for p in photos:
+                p.delete() # Trigger physical file deletion
+                
             messages.success(request, '✅ Checklist sinalizado como RESOLVIDO com sucesso!')
             
             if checklist_type in ['truck', 'trailer']:
                 return redirect(redirect_url, m_type=checklist_type, pk=pk)
             return redirect(redirect_url, pk=pk)
 
+
     return redirect('dashboard')
+
+@login_required
+def download_checklist_photos_zip(request, checklist_type, pk):
+    """Generates a ZIP file containing all photos for a specific checklist"""
+    ModelClass = None
+    if checklist_type == 'portaria':
+        ModelClass = Checklist
+    elif checklist_type == 'forklift':
+        ModelClass = ChecklistForklift
+    
+    if not ModelClass:
+        messages.error(request, 'Tipo de checklist inválido.')
+        return redirect('dashboard')
+        
+    obj = get_object_or_404(ModelClass, pk=pk)
+    photos = obj.photos
+    
+    if not photos:
+        messages.warning(request, 'Este checklist não possui fotos para baixar.')
+        return redirect(f'{checklist_type}_detail', pk=pk)
+        
+    # Create ZIP in memory
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w') as zip_file:
+        for i, photo in enumerate(photos):
+            if photo.file and os.path.exists(photo.file.path):
+                # Use a friendly name for each file in the zip
+                ext = photo.file.name.split('.')[-1]
+                filename = f"foto_{i+1}_{obj.id}.{ext}"
+                zip_file.write(photo.file.path, filename)
+            
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.read(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="fotos_checklist_{checklist_type}_{pk}.zip"'
+    return response

@@ -1,5 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+import os
+import uuid
 
 class Profile(models.Model):
     ROLES = [
@@ -137,6 +141,12 @@ class Checklist(models.Model):
     @property
     def is_resolved(self):
         return self.resolvido_por is not None
+
+    @property
+    def photos(self):
+        from django.contrib.contenttypes.models import ContentType
+        ct = ContentType.objects.get_for_model(self)
+        return ChecklistPhoto.objects.filter(content_type=ct, object_id=self.id)
 
     class Meta:
         verbose_name = "Checklist de Portaria"
@@ -387,6 +397,12 @@ class ChecklistForklift(models.Model):
     def is_resolved(self):
         return self.resolvido_por is not None
 
+    @property
+    def photos(self):
+        from django.contrib.contenttypes.models import ContentType
+        ct = ContentType.objects.get_for_model(self)
+        return ChecklistPhoto.objects.filter(content_type=ct, object_id=self.id)
+
     class Meta:
         verbose_name = "Checklist de Empilhadeira"
         verbose_name_plural = "Checklists de Empilhadeira"
@@ -517,3 +533,31 @@ class TelegramConfig(models.Model):
     def get_decrypted_token(self):
         from .utils import decrypt_password
         return decrypt_password(self.bot_token)
+
+def checklist_photo_path(instance, filename):
+    ext = filename.split('.')[-1]
+    filename = f"{uuid.uuid4()}.{ext}"
+    return os.path.join('checklists', filename)
+
+class ChecklistPhoto(models.Model):
+    # ContentType link (can point to Checklist or ChecklistForklift)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    file = models.ImageField(upload_to=checklist_photo_path)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Foto do Checklist"
+        verbose_name_plural = "Fotos do Checklist"
+
+    def delete(self, *args, **kwargs):
+        # Delete file from storage when model is deleted
+        if self.file:
+            if os.path.isfile(self.file.path):
+                os.remove(self.file.path)
+        super().delete(*args, **kwargs)
+
+    def __str__(self):
+        return f"Foto {self.id} - {self.content_object}"

@@ -23,7 +23,8 @@ from checklists.views import (
     dashboard_view, portaria_create_view, portaria_detail_view, 
     maintenance_create_view, condutor_list_view, veiculo_list_view, 
     maintenance_detail_view, system_admin_view, forklift_create_view, forklift_detail_view,
-    agenda_manutencao_view, schedule_create_view, schedule_update_status_view, resolve_checklist_view
+    agenda_manutencao_view, schedule_create_view, schedule_update_status_view, resolve_checklist_view,
+    download_checklist_photos_zip
 )
 
 urlpatterns = [
@@ -32,6 +33,7 @@ urlpatterns = [
     path('portaria/nova/', portaria_create_view, name='portaria_create'),
     path('portaria/<int:pk>/', portaria_detail_view, name='portaria_detail'),
     path('checklist/resolver/<str:checklist_type>/<int:pk>/', resolve_checklist_view, name='resolve_checklist'),
+    path('checklist/download-zip/<str:checklist_type>/<int:pk>/', download_checklist_photos_zip, name='download_photos_zip'),
     path('manutencao/agenda/', agenda_manutencao_view, name='agenda_manutencao'),
     path('manutencao/agenda/nova/', schedule_create_view, name='schedule_create'),
     path('manutencao/agenda/status/<int:pk>/', schedule_update_status_view, name='schedule_status'),
@@ -52,3 +54,9 @@ urlpatterns = [
 
     path('admin/', admin.site.urls),
 ]
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
