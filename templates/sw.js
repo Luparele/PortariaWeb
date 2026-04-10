@@ -7,11 +7,19 @@ const ASSETS_TO_CACHE = [
   'https://unpkg.com/lucide@latest'
 ];
 
-// Install Event
+// Install Event - Resilient Caching
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Force the waiting service worker to become the active service worker
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      console.log('[SW] Iniciando cache de ativos...');
+      return Promise.allSettled(
+        ASSETS_TO_CACHE.map(url => {
+          return cache.add(url).catch(err => {
+            console.error(`[SW] Falha ao cachear: ${url}`, err);
+          });
+        })
+      );
     })
   );
 });

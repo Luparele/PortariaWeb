@@ -279,7 +279,14 @@
 
           logPWA(`Status de permissão atual: ${Notification.permission}`);
           
-          navigator.serviceWorker.ready.then(registration => {
+          // Timeout helper for promises
+          const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms));
+
+          // Use Promise.race to prevent getting stuck if sw.ready hangs
+          Promise.race([
+              navigator.serviceWorker.ready,
+              timeout(10000) // 10 seconds timeout
+          ]).then(registration => {
               logPWA('Service Worker READY (Pronto).');
               registration.pushManager.getSubscription().then(subscription => {
                   if (subscription) {

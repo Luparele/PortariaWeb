@@ -907,8 +907,6 @@ def home_view(request):
             }
             try:
                 # Verify if user has webpush subscriptions
-            try:
-                # Verify if user has webpush subscriptions
                 sub_count = 0
                 if hasattr(request.user, 'webpush_info'):
                     sub_count = request.user.webpush_info.count()
