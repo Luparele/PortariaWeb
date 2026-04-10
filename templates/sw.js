@@ -1,4 +1,4 @@
-const CACHE_NAME = 'checkup-cache-v1';
+const CACHE_NAME = 'checkup-cache-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/img/logo.png',
@@ -35,14 +35,24 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event
+// Fetch Event (Network-First)
 self.addEventListener('fetch', (event) => {
+  // PWA deve buscar primeiro a versão mais nova no servidor (Network First).
+  // Se falhar (offline), recorre ao cache.
+  if (event.request.method !== 'GET') return;
+  
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
-    }).catch(() => {
-      // Offline fallback if needed
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        const clonedResponse = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, clonedResponse);
+        });
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });
 
