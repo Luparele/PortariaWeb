@@ -169,3 +169,9 @@ WEBPUSH_SETTINGS = {
     "VAPID_PRIVATE_KEY": os.getenv("VAPID_PRIVATE_KEY", ""),
     "VAPID_ADMIN_EMAIL": os.getenv("VAPID_ADMIN_EMAIL", "admin@intalog.com.br")
 }
+
+# Debug print for server logs (PythonAnywhere)
+if not WEBPUSH_SETTINGS["VAPID_PUBLIC_KEY"]:
+    print("WARNING: VAPID_PUBLIC_KEY is empty! Check your .env file and load_dotenv call.")
+else:
+    print(f"VAPID_PUBLIC_KEY loaded successfully: {WEBPUSH_SETTINGS['VAPID_PUBLIC_KEY'][:10]}...")
