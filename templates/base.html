@@ -149,14 +149,22 @@
           lucide.createIcons();
       }
 
-      // Check subscription status on load + Auto-Resync
-      window.addEventListener('load', () => {
-          if ('serviceWorker' in navigator && 'PushManager' in window) {
+      // Registro e Sincronização do Service Worker
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+          // Registrar o Service Worker de fato
+          navigator.serviceWorker.register('{% url "sw_js" %}').then(reg => {
+              console.log('SW Registrado com sucesso:', reg.scope);
+          }).catch(err => {
+              console.error('Falha ao registrar SW:', err);
+          });
+
+          // Verificar assinatura e Auto-Resync
+          window.addEventListener('load', () => {
               navigator.serviceWorker.ready.then(registration => {
                   registration.pushManager.getSubscription().then(subscription => {
                       const isSub = !!subscription;
                       
-                      // Auto-Resync: Recover if permission granted but local sub missing
+                      // Auto-Resync: Se permitido mas não inscrito, recupera
                       if (!isSub && Notification.permission === 'granted') {
                           if (typeof subscribe === 'function') subscribe(registration);
                       }
@@ -165,8 +173,8 @@
                       if (typeof updateCardUI === 'function') updateCardUI(isSub);
                   });
               });
-          }
-      });
+          });
+      }
 
       const subscribeAction = () => {
           if (!window.isSecureContext || !('serviceWorker' in navigator)) return;
@@ -200,7 +208,10 @@
                       }
                   }
               });
-          }).catch(console.error);
+          }).catch(err => {
+              console.error('Erro na ação de inscrição:', err);
+              if (err.message === 'Timeout') alert('O Service Worker demorou muito para responder. Tente atualizar a página (F5).');
+          });
       };
 
       if (webpushBtn) webpushBtn.addEventListener('click', subscribeAction);
