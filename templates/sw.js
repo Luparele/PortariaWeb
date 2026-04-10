@@ -1,10 +1,8 @@
-const CACHE_NAME = 'checkup-cache-v2';
+const CACHE_NAME = 'checkup-cache-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/img/logo.png',
-  '/static/img/pwa-icon.png',
-  'https://cdn.tailwindcss.com',
-  'https://unpkg.com/lucide@latest'
+  '/static/img/pwa-icon.png'
 ];
 
 // Install Event - Resilient Caching
