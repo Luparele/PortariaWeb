@@ -205,6 +205,15 @@ def _send_portaria_anomaly_email(checklist, request=None):
     except Exception as e:
         print(f"Erro ao enviar e-mail Portaria: {e}")
 
+    # Notificação Telegram
+    msg = f"<b>⚠️ ALERTA DE ANOMALIA: PORTARIA</b>\n"
+    msg += f"<i>Central Operacional - Intalog</i>\n\n"
+    msg += f"Veículo: {checklist.placa_cavalo.placa}\n"
+    msg += f"Porteiro: {checklist.porteiro.username if checklist.porteiro else 'S/N'}\n"
+    msg += f"Anomalias: {checklist.anomalias}\n\n"
+    msg += f"🔗 Detalhes: {site_url}/portaria/{checklist.id}/"
+    _send_telegram_message(msg)
+
 def _send_maintenance_alert(instance, veiculo_tipo, request=None):
     """Standalone function to send Maintenance alerts"""
     emails = list(AlertEmail.objects.filter(category='MANUTENCAO').values_list('email', flat=True))
@@ -238,6 +247,15 @@ def _send_maintenance_alert(instance, veiculo_tipo, request=None):
         send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
     except Exception as e:
         print(f"Erro ao enviar e-mail Manutenção: {e}")
+
+    # Notificação Telegram
+    msg = f"<b>🛠️ ANOMALIA: MANUTENÇÃO ({veiculo_tipo})</b>\n"
+    msg += f"<i>Equipe de Manutenção - Intalog</i>\n\n"
+    msg += f"Veículo: {instance.veiculo.placa}\n"
+    msg += f"Mecânico: {instance.responsavel.username if instance.responsavel else 'S/N'}\n"
+    msg += f"Observações: {instance.observacoes}\n\n"
+    msg += f"🔗 Detalhes: {site_url}/manutencao/{'truck' if veiculo_tipo == 'CAMINHÃO' else 'trailer'}/{instance.id}/"
+    _send_telegram_message(msg)
 
 def _send_forklift_anomaly_email(instance, request=None):
     """Standalone function to send Forklift anomaly alerts"""
@@ -324,6 +342,36 @@ def _send_push_to_roles(roles, title, message, url='/'):
             send_user_notification(user=user, payload=payload, ttl=1000)
         except Exception as e:
             print(f"Erro ao enviar push para {user.username}: {e}")
+
+def _send_schedule_alerts(schedule, request=None):
+    """Helper to send alerts when a new maintenance is scheduled"""
+    emails = AlertEmail.objects.filter(category='AGENDA').values_list('email', flat=True)
+    subject = f"📅 NOVO AGENDAMENTO: {schedule.veiculo.placa}"
+    site_url = request.build_absolute_uri('/')[:-1] if request else 'http://localhost:8001'
+    
+    html_content = render_to_string('emails/schedule_email.html', {
+        'schedule': schedule,
+        'site_url': site_url,
+        'now': datetime.now()
+    })
+    
+    # Email
+    if emails:
+        connection, from_email = _get_email_connection()
+        try:
+            send_mail(subject, "", from_email, list(emails), html_message=html_content, connection=connection)
+        except Exception as e:
+            print(f"Error sending schedule email: {e}")
+
+    # Telegram
+    msg = f"<b>📅 NOVO AGENDAMENTO DE MANUTENÇÃO</b>\n"
+    msg += f"<i>Central Operacional - Intalog</i>\n\n"
+    msg += f"Veículo: {schedule.veiculo.placa}\n"
+    msg += f"Início: {schedule.data_paralizacao.strftime('%d/%m/%Y %H:%M')}\n"
+    msg += f"Previsão: {schedule.data_previsao_liberacao.strftime('%d/%m/%Y %H:%M')}\n"
+    msg += f"Descrição: {schedule.descricao}\n\n"
+    msg += f"🔗 Agenda: {site_url}/manutencao/agenda/"
+    _send_telegram_message(msg)
 
 def _notify_new_checklist_push(checklist, type_label):
     """Notify managers about a new checklist via PWA Push"""
