@@ -24,7 +24,7 @@ from checklists.views import (
     maintenance_create_view, condutor_list_view, veiculo_list_view, 
     maintenance_detail_view, system_admin_view, forklift_create_view, forklift_detail_view,
     agenda_manutencao_view, schedule_create_view, schedule_update_status_view, resolve_checklist_view,
-    download_checklist_photos_zip, generate_telegram_token, telegram_webhook, home_view, log_pwa_debug
+    download_checklist_photos_zip, generate_telegram_token, telegram_webhook, home_view
 )
 
 urlpatterns = [
@@ -56,7 +56,6 @@ urlpatterns = [
     # Telegram Deep Linking
     path('telegram/ativar/', generate_telegram_token, name='telegram_activate'),
     path('telegram/webhook/', telegram_webhook, name='telegram_webhook'),
-    path('log-pwa-debug/', log_pwa_debug, name='log_pwa_debug'),
 
     path('admin/', admin.site.urls),
 ]

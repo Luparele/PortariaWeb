@@ -14,6 +14,8 @@ from django.utils import timezone
 from datetime import datetime
 import json
 import requests
+import logging
+import traceback
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
@@ -873,28 +875,6 @@ def veiculo_list_view(request):
     veiculos = Veiculo.objects.all().order_by('tipo', 'placa')
     return render(request, 'veiculo_list.html', {'veiculos': veiculos})
 
-def log_pwa_event_local(user, msg):
-    """Helper to log PWA events to the log file"""
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    log_dir = os.path.join(settings.BASE_DIR, 'ARQUIVOS AUXILIARES', 'logs')
-    os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(log_dir, 'pwa_debug.log')
-    with open(log_file, 'a', encoding='utf-8') as f:
-        f.write(f"[{now}] User: {user} | {msg}\n")
-
-@login_required
-@csrf_exempt
-def log_pwa_debug(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            msg = data.get('msg', 'No message')
-            log_pwa_event_local(request.user.username, msg)
-            return JsonResponse({'status': 'ok'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'msg': str(e)}, status=400)
-    return HttpResponse(status=405)
-
 @login_required
 def home_view(request):
     if request.method == 'POST':
@@ -911,19 +891,32 @@ def home_view(request):
                 if hasattr(request.user, 'webpush_info'):
                     sub_count = request.user.webpush_info.count()
                 
-                log_pwa_event_local(request.user.username, f"BACKEND: Tentativa de ENVIO TESTE. Inscritos: {sub_count}")
-
                 if sub_count == 0:
                     messages.error(request, 'Erro: Seu navegador ainda não está inscrito. Clique no ícone do sino para ativar.')
                 else:
-                    send_user_notification(user=request.user, payload=payload, ttl=1000)
-                    log_pwa_event_local(request.user.username, "BACKEND: Notificação disparada com SUCESSO via send_user_notification.")
-                    messages.success(request, 'Notificação Push enviada com sucesso para este aparelho!')
+                    # Looping manual para ser resiliente a erros individuais (403, 410, etc)
+                    from webpush.utils import _send_notification
+                    success_count = 0
+                    fail_count = 0
+                    for info in request.user.webpush_info.all():
+                        try:
+                            # O payload deve ser uma string JSON para o pywebpush
+                            payload_json = json.dumps(payload)
+                            _send_notification(info.subscription, payload_json, ttl=1000)
+                            success_count += 1
+                        except Exception:
+                            fail_count += 1
+                    
+                    if success_count > 0:
+                        messages.success(request, f'Notificação enviada com sucesso para {success_count} aparelho(s)!')
+                    if fail_count > 0:
+                        messages.warning(request, f'Houve falha em {fail_count} aparelho(s) (possivelmente tokens expirados).')
+                
+                return redirect('home')
             except Exception as e:
-                log_pwa_event_local(request.user.username, f"BACKEND: ERRO ao disparar notificação: {str(e)}")
-                messages.error(request, f'Erro ao disparar PWA Push: {str(e)}')
+                messages.error(request, f'Erro ao disparar notificação: {str(e)}')
+            
             return redirect('home')
-
     return render(request, 'home.html')
 
 import unicodedata

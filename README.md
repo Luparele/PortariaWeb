@@ -72,6 +72,12 @@ O projeto foi concebido com foco na **eficiência operacional** e no uso em camp
     *   **Anexo PDF Dinâmico**: Geração automática de uma "Página 2" no relatório de impressão com escalonamento inteligente de fotos.
     *   **Ciclo de Vida Automático**: Deleção de fotos após resolução do problema ou expiração de 30 dias para otimização de armazenamento.
 
+8.  **PWA Push Notifications (Novo)**:
+    *   **Central de Notificações**: Interface dedicada para ativação e teste de notificações push do navegador.
+    *   **Notificações em Tempo Real**: Alertas nativos no Windows, Android e iOS diretamente via PWA.
+    *   **Sincronização Automática**: Lógica de "Push Auto-Resync" para manter a ativação persistente.
+    *   **Segurança VAPID**: Implementação de chaves criptográficas para autenticação segura com servidores de push (FCM/Google).
+
 ---
 
 ## ⚖️ Direitos e Licenciamento
