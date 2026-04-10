@@ -301,13 +301,49 @@
                                     </button>
                                 </form>
                             </div>
-                            {% empty %}
-                            <div class="col-span-full py-10 flex flex-col items-center justify-center opacity-30 italic">
-                                <i data-lucide="send-off" class="w-8 h-8 mb-2"></i>
-                                <span class="text-xs font-bold uppercase">Nenhum robô configurado</span>
-                            </div>
                             {% endfor %}
                         </div>
+
+                        <!-- NOVOS USUÁRIOS VINCULADOS (Deep Linking) -->
+                        {% if telegram_users %}
+                        <div class="mt-8 pt-8 border-t border-blue-100/50">
+                            <h4 class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-4">Usuários Vinculados via Deep Linking</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {% for t_user in telegram_users %}
+                                <div class="flex items-center justify-between p-4 bg-white/60 border border-blue-100/50 rounded-2xl group hover:shadow-md transition-all">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100">
+                                            <i data-lucide="user-check" class="w-5 h-5"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-black text-slate-800 uppercase leading-none mb-1">{{ t_user.get_full_name|default:t_user.username }}</p>
+                                            <div class="flex items-center gap-2">
+                                                <p class="text-[10px] font-bold text-indigo-600">ID: {{ t_user.profile.telegram_chat_id }}</p>
+                                                <form method="post" class="inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="test_telegram_single">
+                                                    <input type="hidden" name="chat_id" value="{{ t_user.profile.telegram_chat_id }}">
+                                                    <input type="hidden" name="nome" value="{{ t_user.get_full_name|default:t_user.username }}">
+                                                    <button type="submit" class="text-indigo-500 hover:text-indigo-700 transition-colors p-1" title="Enviar Mensagem Teste">
+                                                        <i data-lucide="mail" class="w-3 h-3"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <form method="post" onsubmit="return confirm('Desvincular o Telegram deste usuário?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="unlink_telegram_user">
+                                        <input type="hidden" name="user_id" value="{{ t_user.id }}">
+                                        <button type="submit" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                                            <i data-lucide="link-2-off" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <!-- CONFIGURAÇÃO SMTP -->

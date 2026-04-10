@@ -966,6 +966,14 @@ def system_admin_view(request):
                 # For the user, let's give more specific advice.
                 messages.error(request, f'Falha ao enviar para {nome}. Motivos prováveis: 1. Token incorreto; 2. O usuário não iniciou o bot; 3. ID do chat inválido.')
             
+        elif action == 'unlink_telegram_user':
+            user_id = request.POST.get('user_id')
+            user_to_unlink = get_object_or_404(User, id=user_id)
+            if hasattr(user_to_unlink, 'profile'):
+                user_to_unlink.profile.telegram_chat_id = None
+                user_to_unlink.profile.save()
+                messages.success(request, f'Vínculo do Telegram de {user_to_unlink.username} removido.')
+
         return redirect('system_admin')
 
     context = {
@@ -973,6 +981,7 @@ def system_admin_view(request):
         'emails_manutencao': AlertEmail.objects.filter(category='MANUTENCAO').order_by('email'),
         'emails_agenda': AlertEmail.objects.filter(category='AGENDA').order_by('email'),
         'telegrams': AlertTelegram.objects.all().order_by('nome'),
+        'telegram_users': User.objects.filter(profile__telegram_chat_id__isnull=False).select_related('profile').order_by('username'),
         'users': User.objects.all().select_related('profile').order_by('-date_joined')[:15],
         'email_config': EmailConfig.objects.first(),
         'telegram_config': TelegramConfig.objects.first(),
