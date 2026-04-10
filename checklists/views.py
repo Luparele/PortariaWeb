@@ -1227,7 +1227,7 @@ def agenda_manutencao_view(request):
     query = request.GET.get('q', '')
     filter_date = request.GET.get('date', '')
     
-    schedules = MaintenanceSchedule.objects.all().order_by('data_paralizacao')
+    schedules = MaintenanceSchedule.objects.select_related('veiculo', 'criado_por').prefetch_related('logs__user').all().order_by('data_paralizacao')
     
     if not query and not filter_date:
         # Default view: Only active events
@@ -1258,15 +1258,15 @@ def agenda_manutencao_view(request):
         # Add initial "Pendente" event based on creation
         logs.append({
             'action': 'Aberto como PENDENTE',
-            'user': s.criado_por.username,
-            'at': s.data_criacao.strftime('%d/%m/%Y %H:%M')
+            'user': s.criado_por.username if s.criado_por else 'Sistema',
+            'at': s.data_criacao.strftime('%d/%m/%Y %H:%M') if s.data_criacao else '--'
         })
         # Add actual status logs
         for log in s.logs.all():
             logs.append({
                 'action': f"Alterado para {log.get_new_status_display()}",
                 'user': log.user.username if log.user else "Sistema",
-                'at': log.created_at.strftime('%d/%m/%Y %H:%M')
+                'at': log.created_at.strftime('%d/%m/%Y %H:%M') if log.created_at else '--'
             })
 
         events.append({
