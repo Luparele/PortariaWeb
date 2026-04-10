@@ -40,5 +40,6 @@ Thumbs.db
 ARQUIVOS AUXILIARES/
 *.bat
 scratch/
+.env
 
 

@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -160,7 +162,7 @@ LOGIN_URL = '/login/'
 
 # WebPush Settings
 WEBPUSH_SETTINGS = {
-    "VAPID_PUBLIC_KEY": "BEyi2KIhYPbStDJFH7C7TdWln_vZhdQgfq0muOVIkBXbyHR9vBfvuPuvKRs0EBm7NE6q08033GujiHcWHnnFVro",
-    "VAPID_PRIVATE_KEY": "ZJjTZoCx1yCY5vb0IbffGRLRT3Uz7-IRTY2vxm35mtg",
-    "VAPID_ADMIN_EMAIL": "admin@intalog.com.br"
+    "VAPID_PUBLIC_KEY": os.getenv("VAPID_PUBLIC_KEY", ""),
+    "VAPID_PRIVATE_KEY": os.getenv("VAPID_PRIVATE_KEY", ""),
+    "VAPID_ADMIN_EMAIL": os.getenv("VAPID_ADMIN_EMAIL", "admin@intalog.com.br")
 }
