@@ -205,9 +205,10 @@
             document.addEventListener('DOMContentLoaded', () => {
                 const cardPushBtn = document.getElementById('card-webpush-subscribe');
                 
-                function updateCardUI(isSubscribed) {
+                // Expose globally so base.html can call it
+                window.updateCardUI = function(isSubscribed) {
                     if (!cardPushBtn) return;
-                    const icon = cardPushBtn.querySelector('i');
+                    const icon = cardPushBtn.querySelector('i, svg');
                     if (isSubscribed) {
                         cardPushBtn.classList.replace('text-slate-400', 'text-orange-500');
                         cardPushBtn.classList.add('bg-orange-50', 'border-orange-100');

@@ -212,7 +212,8 @@
           btns.forEach(btn => {
               if (!btn) return;
               btn.classList.remove('hidden');
-              const icon = btn.querySelector('i');
+              // Lucide replaces <i> with <svg>, so we need to find either
+              const icon = btn.querySelector('i, svg');
               if (isSubscribed) {
                   btn.classList.replace('text-slate-400', 'text-amber-500');
                   btn.title = "Notificações Ativas";
@@ -254,7 +255,11 @@
                           // Fortunately django-webpush usually handles the UI if we use its tags,
                           // but we are doing a custom UI.
                           setTimeout(() => {
-                            registration.pushManager.getSubscription().then(sub => updateWebpushUI(!!sub));
+                            registration.pushManager.getSubscription().then(sub => {
+                                updateWebpushUI(!!sub);
+                                // If we are on home.html, this will be defined globally or we check
+                                if (typeof updateCardUI === 'function') updateCardUI(!!sub);
+                            });
                           }, 2000);
                       }
                   }
