@@ -874,6 +874,28 @@ def veiculo_list_view(request):
     return render(request, 'veiculo_list.html', {'veiculos': veiculos})
 
 @login_required
+@csrf_exempt
+def log_pwa_debug(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            msg = data.get('msg', 'No message')
+            user = request.user.username
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            log_dir = os.path.join(settings.BASE_DIR, 'ARQUIVOS AUXILIARES', 'logs')
+            os.makedirs(log_dir, exist_ok=True)
+            log_file = os.path.join(log_dir, 'pwa_debug.log')
+            
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(f"[{now}] User: {user} | {msg}\n")
+            
+            return JsonResponse({'status': 'ok'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'msg': str(e)}, status=400)
+    return HttpResponse(status=405)
+
+@login_required
 def home_view(request):
     if request.method == 'POST':
         action = request.POST.get('action')

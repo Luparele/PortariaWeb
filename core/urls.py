@@ -56,6 +56,7 @@ urlpatterns = [
     # Telegram Deep Linking
     path('telegram/ativar/', generate_telegram_token, name='telegram_activate'),
     path('telegram/webhook/', telegram_webhook, name='telegram_webhook'),
+    path('log-pwa-debug/', log_pwa_debug, name='log_pwa_debug'),
 
     path('admin/', admin.site.urls),
 ]

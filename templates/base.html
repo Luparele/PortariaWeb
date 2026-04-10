@@ -29,6 +29,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     {% block extra_head %}{% endblock %}
+    {% webpush_header %}
 
     <script>
       if ('serviceWorker' in navigator) {
@@ -207,6 +208,15 @@
       const webpushBtn = document.getElementById('webpush-subscribe-button');
       const webpushBtnMobile = document.getElementById('webpush-subscribe-button-mobile');
 
+      function logPWA(msg) {
+          console.log(`[PWA Debug] ${msg}`);
+          fetch('/log-pwa-debug/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ msg: msg })
+          }).catch(err => console.error('Logging failed:', err));
+      }
+
       function updateWebpushUI(isSubscribed) {
           const btns = [webpushBtn, webpushBtnMobile];
           btns.forEach(btn => {
@@ -239,28 +249,38 @@
       });
 
       const subscribeAction = () => {
+          logPWA('Clique no botão de inscrição detectado.');
+          if (!('serviceWorker' in navigator)) {
+              logPWA('ERRO: Service Worker não suportado neste navegador.');
+              return;
+          }
           navigator.serviceWorker.ready.then(registration => {
+              logPWA('Service Worker pronto para inscrição.');
               registration.pushManager.getSubscription().then(subscription => {
                   if (subscription) {
-                      // Unsubscribe logic if needed, but here we just toggle
+                      logPWA('Tentando cancelar inscrição existente...');
                       subscription.unsubscribe().then(successful => {
-                          if (successful) updateWebpushUI(false);
+                          if (successful) {
+                              logPWA('Inscrição cancelada com sucesso.');
+                              updateWebpushUI(false);
+                              if (typeof updateCardUI === 'function') updateCardUI(false);
+                          } else {
+                              logPWA('FALHA ao cancelar inscrição.');
+                          }
                       });
                   } else {
-                      // Use the helper from webpush_header
+                      logPWA('Iniciando processo de nova inscrição (subscribe)...');
                       if (typeof subscribe === 'function') {
                           subscribe();
-                          // The webpush library doesn't always provide a callback here, 
-                          // so we check periodically or just rely on the next load.
-                          // Fortunately django-webpush usually handles the UI if we use its tags,
-                          // but we are doing a custom UI.
                           setTimeout(() => {
                             registration.pushManager.getSubscription().then(sub => {
+                                logPWA(sub ? 'Nova inscrição realizada com sucesso!' : 'AVISO: Inscrição não detectada após 2 segundos.');
                                 updateWebpushUI(!!sub);
-                                // If we are on home.html, this will be defined globally or we check
                                 if (typeof updateCardUI === 'function') updateCardUI(!!sub);
                             });
                           }, 2000);
+                      } else {
+                          logPWA('ERRO: Função global "subscribe" (do django-webpush) não encontrada.');
                       }
                   }
               });

@@ -178,7 +178,15 @@
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
                         <div class="flex items-center gap-3">
                             <i data-lucide="bell-ring" class="w-4 h-4 text-orange-500"></i>
-                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-700">Push PWA</span>
+                            <div class="flex flex-col">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-700">Push PWA</span>
+                                <div id="push-status-badge" class="hidden">
+                                    <span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">Ativado</span>
+                                </div>
+                                <div id="push-status-inactive" class="block">
+                                    <span class="bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">Inativo</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="flex items-center gap-2">
                             <!-- Subscribe Button (O Sininho) -->
@@ -209,14 +217,21 @@
                 window.updateCardUI = function(isSubscribed) {
                     if (!cardPushBtn) return;
                     const icon = cardPushBtn.querySelector('i, svg');
+                    const badge = document.getElementById('push-status-badge');
+                    const inactive = document.getElementById('push-status-inactive');
+
                     if (isSubscribed) {
                         cardPushBtn.classList.replace('text-slate-400', 'text-orange-500');
                         cardPushBtn.classList.add('bg-orange-50', 'border-orange-100');
                         if (icon) icon.setAttribute('data-lucide', 'bell');
+                        if (badge) badge.classList.remove('hidden');
+                        if (inactive) inactive.classList.add('hidden');
                     } else {
                         cardPushBtn.classList.replace('text-orange-500', 'text-slate-400');
                         cardPushBtn.classList.remove('bg-orange-50', 'border-orange-100');
                         if (icon) icon.setAttribute('data-lucide', 'bell-off');
+                        if (badge) badge.classList.add('hidden');
+                        if (inactive) inactive.classList.remove('hidden');
                     }
                     lucide.createIcons();
                 }
