@@ -83,22 +83,25 @@ def _get_email_connection():
     )
     return connection, config.default_from or settings.DEFAULT_FROM_EMAIL
 
-def _send_telegram_message(message):
+def _send_telegram_message(message, request=None):
     """
     Sends a message to all active contacts in the AlertTelegram model
     using the bot token from the database. Includes retries for proxy/network issues.
     """
-    import time
+    import time, os
     config = TelegramConfig.objects.first()
     if not config:
         print("Telegram configuration missing in database.")
+        if request: messages.warning(request, "Configuração do Telegram ausente. Alerta não enviado.")
         return
 
     bot_token = config.get_decrypted_token()
     if not bot_token:
         print("Telegram bot token is empty.")
+        if request: messages.warning(request, "Token do Telegram vazio. Alerta não enviado.")
         return
 
+    proxies = {"http": "http://proxy.server:3128", "https": "http://proxy.server:3128"} if os.environ.get('PYTHONANYWHERE_SITE') else None
     contacts = AlertTelegram.objects.filter(ativo=True)
     for contact in contacts:
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -110,28 +113,30 @@ def _send_telegram_message(message):
         
         for attempt in range(3):
             try:
-                response = requests.post(url, json=payload, timeout=10)
+                response = requests.post(url, json=payload, timeout=10, proxies=proxies)
                 if response.status_code == 200:
                     break
                 elif response.status_code in [502, 503, 504]:
                     time.sleep(1)
                 else:
                     print(f"Erro Telegram ({contact.chat_id}): {response.status_code} - {response.text}")
+                    if request: messages.warning(request, f"Erro Telegram: Código {response.status_code}")
                     break
             except Exception as e:
                 print(f"Erro ao enviar para {contact.nome} (Tentativa {attempt+1}): {e}")
+                if attempt == 2 and request: messages.warning(request, f"Falha na rede ao conectar no Telegram (Possível bloqueio de Proxy/Firewall).")
                 time.sleep(1)
 
 def _send_single_telegram_message(chat_id, message):
     """Sends a message to a specific chat_id with retry logic and detailed error return"""
-    import time
+    import time, os
     config = TelegramConfig.objects.first()
     if not config:
-        return False, "Configuração do bot não encontrada no sistema."
+        return False, "Configuração do bot não encontrada."
     
     bot_token = config.get_decrypted_token()
     if not bot_token:
-        return False, "Token do bot não configurado ou inválido."
+        return False, "Token do bot não configurado."
         
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
@@ -140,9 +145,23 @@ def _send_single_telegram_message(chat_id, message):
         'parse_mode': 'HTML'
     }
     
+    proxies = {"http": "http://proxy.server:3128", "https": "http://proxy.server:3128"} if os.environ.get('PYTHONANYWHERE_SITE') else None
     last_error = "Erro desconhecido"
     for attempt in range(3):
         try:
+            response = requests.post(url, json=payload, timeout=10, proxies=proxies)
+            if response.status_code == 200:
+                return True, "Success"
+            elif response.status_code in [502, 503, 504]:
+                time.sleep(1)
+                last_error = f"Erro no servidor do Telegram: {response.status_code}"
+            else:
+                return False, f"{response.status_code} - {response.text}"
+        except Exception as e:
+            last_error = str(e)
+            time.sleep(1)
+            
+    return False, last_error
             response = requests.post(url, json=payload, timeout=10)
             if response.status_code == 200:
                 return True, "Mensagem enviada com sucesso!"
@@ -249,15 +268,16 @@ def _send_maintenance_alert(instance, veiculo_tipo, request=None):
         send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
     except Exception as e:
         print(f"Erro ao enviar e-mail Manutenção: {e}")
+        if request: messages.warning(request, "Falha de rede ao conectar no SMTP do E-mail. Tente verificar o provedor na Configuração Global.")
 
     # Notificação Telegram
-    msg = f"<b>🛠️ ANOMALIA: MANUTENÇÃO ({veiculo_tipo})</b>\n"
+    msg = f"<b>🚨🛠️ ANOMALIA: MANUTENÇÃO ({veiculo_tipo})</b>\n"
     msg += f"<i>Equipe de Manutenção - Intalog</i>\n\n"
     msg += f"Veículo: {instance.veiculo.placa}\n"
     msg += f"Mecânico: {instance.responsavel.username if instance.responsavel else 'S/N'}\n"
     msg += f"Observações: {instance.observacoes}\n\n"
     msg += f"🔗 Detalhes: {site_url}/manutencao/{'truck' if veiculo_tipo == 'CAMINHÃO' else 'trailer'}/{instance.id}/"
-    _send_telegram_message(msg)
+    _send_telegram_message(msg, request=request)
 
 def _send_forklift_anomaly_email(instance, request=None):
     """Standalone function to send Forklift anomaly alerts"""
@@ -318,6 +338,7 @@ def _send_schedule_alerts(schedule, request=None):
             send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
         except Exception as e:
             print(f"Erro ao enviar e-mail Agenda: {e}")
+            if request: messages.warning(request, "Aviso: O agendamento foi salvo, porém a tentativa de envio de E-mail de Alerta falhou por erro de conexão SMTP.")
 
     # 2. Telegram Alerts
     msg = f"<b>🚛 NOVO AGENDAMENTO DE MANUTENÇÃO</b>\n"
@@ -325,55 +346,10 @@ def _send_schedule_alerts(schedule, request=None):
     msg += f"Placa: {schedule.veiculo.placa}\n"
     msg += f"Início: {schedule.data_paralizacao.strftime('%d/%m/%Y %H:%M')}\n"
     msg += f"Previsão: {schedule.data_previsao_liberacao.strftime('%d/%m/%Y %H:%M')}\n"
-    msg += f"Descrição: {schedule.descricao}"
-    
-    _send_telegram_message(msg)
-
-def _send_push_to_roles(roles, title, message, url='/'):
-    """Sends a push notification to all users with specific roles"""
-    from django.contrib.auth.models import User
-    users = User.objects.filter(profile__role__in=roles)
-    payload = {
-        "title": title,
-        "body": message,
-        "url": url,
-        "icon": "/static/img/pwa-icon.png"
-    }
-    for user in users:
-        try:
-            send_user_notification(user=user, payload=payload, ttl=1000)
-        except Exception as e:
-            print(f"Erro ao enviar push para {user.username}: {e}")
-
-def _send_schedule_alerts(schedule, request=None):
-    """Helper to send alerts when a new maintenance is scheduled"""
-    emails = AlertEmail.objects.filter(category='AGENDA').values_list('email', flat=True)
-    subject = f"📅 NOVO AGENDAMENTO: {schedule.veiculo.placa}"
-    site_url = request.build_absolute_uri('/')[:-1] if request else 'http://localhost:8001'
-    
-    html_content = render_to_string('emails/schedule_email.html', {
-        'schedule': schedule,
-        'site_url': site_url,
-        'now': datetime.now()
-    })
-    
-    # Email
-    if emails:
-        connection, from_email = _get_email_connection()
-        try:
-            send_mail(subject, "", from_email, list(emails), html_message=html_content, connection=connection)
-        except Exception as e:
-            print(f"Error sending schedule email: {e}")
-
-    # Telegram
-    msg = f"<b>📅 NOVO AGENDAMENTO DE MANUTENÇÃO</b>\n"
-    msg += f"<i>Central Operacional - Intalog</i>\n\n"
-    msg += f"Veículo: {schedule.veiculo.placa}\n"
-    msg += f"Início: {schedule.data_paralizacao.strftime('%d/%m/%Y %H:%M')}\n"
-    msg += f"Previsão: {schedule.data_previsao_liberacao.strftime('%d/%m/%Y %H:%M')}\n"
     msg += f"Descrição: {schedule.descricao}\n\n"
     msg += f"🔗 Agenda: {site_url}/manutencao/agenda/"
-    _send_telegram_message(msg)
+    
+    _send_telegram_message(msg, request=request)
 
 def _notify_new_checklist_push(checklist, type_label):
     """Notify managers about a new checklist via PWA Push"""
