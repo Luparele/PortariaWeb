@@ -125,9 +125,16 @@ def _send_email_via_api(subject, html_content, recipient_list, from_email=None, 
             print(f"E-mail enviado via API com sucesso! ID: {response.json().get('id')}")
             return True
         else:
+            err_body = response.json() if response.headers.get('Content-Type') == 'application/json' else {}
             err_msg = f"Erro API Resend ({response.status_code}): {response.text}"
             print(err_msg)
-            if request: messages.warning(request, f"Aviso: Falha ao enviar via API Web: {response.status_code}")
+            
+            # Tratar erro específico de "Testing Mode" (Onboarding)
+            if response.status_code == 403 and "send testing emails to your own email address" in str(err_body.get('message', '')):
+                if request: messages.warning(request, "Aviso: O Resend está em 'Modo de Teste'. Você só pode enviar e-mails para o dono da conta (eduardo.luparele@gmail.com) até validar seu domínio no painel do Resend.")
+            elif request: 
+                messages.warning(request, f"Aviso: Falha ao enviar via API Web: {response.status_code}")
+                
             return False
     except Exception as e:
         print(f"Erro de conexão com a API Resend: {e}")
@@ -1278,7 +1285,7 @@ def agenda_manutencao_view(request):
         'events_json': json.dumps(events, cls=DjangoJSONEncoder),
         'schedules': schedules,
         'veiculos': veiculos,
-        'today': datetime.now()
+        'today': timezone.now()
     }
     return render(request, 'agenda_manutencao.html', context)
 
