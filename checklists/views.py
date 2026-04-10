@@ -339,6 +339,23 @@ def _send_schedule_alerts(schedule, request=None):
     
     _send_telegram_message(msg, request=request)
 
+def _send_push_to_roles(roles, title, message, url='/'):
+    """Sends a push notification to all users with specific roles"""
+    from django.contrib.auth.models import User
+    from webpush import send_user_notification
+    users = User.objects.filter(profile__role__in=roles)
+    payload = {
+        "title": title,
+        "body": message,
+        "url": url,
+        "icon": "/static/img/pwa-icon.png"
+    }
+    for user in users:
+        try:
+            send_user_notification(user=user, payload=payload, ttl=1000)
+        except Exception as e:
+            print(f"Erro ao enviar push para {user.username}: {e}")
+
 def _notify_new_checklist_push(checklist, type_label):
     """Notify managers about a new checklist via PWA Push"""
     roles_to_notify = ['GESTOR', 'ADMIN', 'SUPERUSER']
