@@ -374,13 +374,21 @@
                             </div>
 
                             <!-- Resumo quando não estiver editando -->
-                            <div x-show="!editing" class="flex items-center gap-3 bg-white/50 border border-slate-200 px-4 py-2 rounded-2xl">
-                                <div class="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center">
-                                    <i data-lucide="mail" class="w-4 h-4 text-indigo-500"></i>
+                            <div x-show="!editing" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                                <div class="flex items-center gap-3 bg-white/50 border border-slate-200 px-4 py-2 rounded-2xl">
+                                    <div class="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center">
+                                        <i data-lucide="{% if email_config.use_api %}cloud{% else %}mail{% endif %}" class="w-4 h-4 text-indigo-500"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">Modo Ativo</p>
+                                        <p class="text-xs font-bold text-slate-900 truncate">{% if email_config.use_api %}API WEB (RESEND){% else %}SMTP TRADICIONAL{% endif %}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">E-mail Ativo</p>
-                                    <p class="text-xs font-bold text-slate-900 truncate max-w-[200px]">{{ email_config.user|default:'NÃO CONFIGURADO' }}</p>
+                                <div class="flex items-center gap-3 bg-white/50 border border-slate-200 px-4 py-2 rounded-2xl">
+                                    <div>
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">Remetente</p>
+                                        <p class="text-xs font-bold text-slate-900 truncate max-w-[150px]">{{ email_config.user|default:'NÃO CONFIGURADO' }}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -426,7 +434,38 @@
                                 </label>
                             </div>
 
-                            <div class="col-span-full pt-4">
+                             <div class="col-span-full pt-4 space-y-4">
+                                <div class="bg-indigo-600/5 border border-indigo-200 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                                            <i data-lucide="zap" class="text-white w-6 h-6"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-indigo-900 font-black uppercase italic tracking-tighter text-lg leading-tight">Configuração de API (Opcional)</h4>
+                                            <p class="text-indigo-600/60 text-[10px] font-black uppercase tracking-widest leading-none">Recomendado para PythonAnywhere</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-6">
+                                        <label class="flex items-center gap-3 cursor-pointer group">
+                                            <input type="checkbox" name="use_api" {% if email_config.use_api %}checked{% endif %} class="w-6 h-6 rounded-lg border-indigo-300 text-indigo-600 focus:ring-indigo-600">
+                                            <div class="flex flex-col">
+                                                <span class="text-[10px] font-black text-indigo-900 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">MODO API WEB</span>
+                                                <span class="text-[8px] font-bold text-indigo-400 uppercase">Pular bloqueio de SMTP</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Resend API Key</label>
+                                    <div class="relative">
+                                        <i data-lucide="key" class="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                                        <input type="password" name="resend_api_key" placeholder="re_••••••••••••••••••••" class="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-5 py-4 text-xs font-bold tracking-widest focus:ring-2 focus:ring-indigo-600 transition-all outline-none">
+                                    </div>
+                                    <p class="text-[8px] text-slate-400 ml-1 italic italic">Deixe em branco para manter a atual. No modo API, os dados de Host/Porta acima são ignorados.</p>
+                                </div>
+
                                 <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white p-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-slate-200 transition-all active:scale-[0.98]">
                                     Salvar Configurações de E-mail
                                 </button>

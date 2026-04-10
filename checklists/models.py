@@ -475,6 +475,10 @@ class EmailConfig(models.Model):
     use_ssl = models.BooleanField(default=True)
     default_from = models.EmailField(max_length=255)
     
+    # API Configurations (For PythonAnywhere Free Tier / Bypass SMTP)
+    use_api = models.BooleanField(default=False, verbose_name="Usar API Web (Resend)")
+    resend_api_key = models.CharField(max_length=500, blank=True, null=True)
+    
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -498,13 +502,22 @@ class EmailConfig(models.Model):
                 pass
         
         if should_encrypt:
-            self.password = encrypt_password(self.password)
+            if self.password and not self.password.startswith('gAAAAA'):
+                self.password = encrypt_password(self.password)
+            if self.resend_api_key and not self.resend_api_key.startswith('gAAAAA'):
+                self.resend_api_key = encrypt_password(self.resend_api_key)
             
         super().save(*args, **kwargs)
 
     def get_decrypted_password(self):
         from .utils import decrypt_password
         return decrypt_password(self.password)
+
+    def get_decrypted_api_key(self):
+        if not self.resend_api_key:
+            return None
+        from .utils import decrypt_password
+        return decrypt_password(self.resend_api_key)
 
 class TelegramConfig(models.Model):
     bot_token = models.CharField(max_length=500) # Will store encrypted string

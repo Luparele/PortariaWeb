@@ -68,8 +68,9 @@ def _process_and_save_photo(obj, photo_file):
 def _get_email_connection():
     """Returns a dynamic SMTP connection based on EmailConfig from database"""
     config = EmailConfig.objects.first()
-    if not config:
-        return None, settings.DEFAULT_FROM_EMAIL
+    if not config or config.use_api:
+        # If config is missing or Use API is enabled, we return None for connection
+        return None, config.default_from if config else settings.DEFAULT_FROM_EMAIL
         
     password = config.get_decrypted_password()
     connection = get_connection(
@@ -82,6 +83,56 @@ def _get_email_connection():
         timeout=10
     )
     return connection, config.default_from or settings.DEFAULT_FROM_EMAIL
+
+def _send_email_via_api(subject, html_content, recipient_list, from_email=None, request=None):
+    """
+    Força o envio de e-mail via API REST (Resend) para pular o bloqueio de SMTP do PythonAnywhere.
+    """
+    import requests, os
+    config = EmailConfig.objects.first()
+    if not config or not config.use_api or not config.resend_api_key:
+        print("API Resend não configurada ou desativada.")
+        return False
+
+    api_key = config.get_decrypted_api_key()
+    url = "https://api.resend.com/emails"
+    
+    # PythonAnywhere Proxy Injection
+    proxies = {"http": "http://proxy.server:3128", "https": "http://proxy.server:3128"} if os.environ.get('PYTHONANYWHERE_SITE') else None
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    # Se estiver usando o domínio de teste do Resend, forçar o 'from' correto
+    sender = from_email or config.default_from or "onboarding@resend.dev"
+    if "resend.dev" in api_key or not config.default_from:
+         # Se a chave for de teste ou não houver remetente fixo, usar o padrão do Resend
+         if "re_Gym" in api_key: # Detectando a chave de onboarding do usuário
+             sender = "onboarding@resend.dev"
+
+    payload = {
+        "from": sender,
+        "to": recipient_list,
+        "subject": subject,
+        "html": html_content
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, proxies=proxies, timeout=15)
+        if response.status_code in [200, 201]:
+            print(f"E-mail enviado via API com sucesso! ID: {response.json().get('id')}")
+            return True
+        else:
+            err_msg = f"Erro API Resend ({response.status_code}): {response.text}"
+            print(err_msg)
+            if request: messages.warning(request, f"Aviso: Falha ao enviar via API Web: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"Erro de conexão com a API Resend: {e}")
+        if request: messages.error(request, f"Erro de rede ao conectar na API de E-mail: {str(e)}")
+        return False
 
 def _send_telegram_message(message, request=None):
     """
@@ -213,10 +264,16 @@ def _send_portaria_anomaly_email(checklist, request=None):
     plain_message = strip_tags(html_message)
     
     connection, from_email = _get_email_connection()
-    try:
-        send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
-    except Exception as e:
-        print(f"Erro ao enviar e-mail Portaria: {e}")
+    config = EmailConfig.objects.first()
+    
+    if config and config.use_api:
+        _send_email_via_api(subject, html_message, list(emails), from_email, request)
+    else:
+        try:
+            send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
+        except Exception as e:
+            print(f"Erro ao enviar e-mail Portaria: {e}")
+            if request: messages.warning(request, "Aviso: O e-mail de alerta não pôde ser enviado por falha de conexão SMTP.")
 
     # Notificação Telegram
     msg = f"<b>⚠️ ALERTA DE ANOMALIA: PORTARIA</b>\n"
@@ -256,11 +313,16 @@ def _send_maintenance_alert(instance, veiculo_tipo, request=None):
     plain_message = strip_tags(html_message)
 
     connection, from_email = _get_email_connection()
-    try:
-        send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
-    except Exception as e:
-        print(f"Erro ao enviar e-mail Manutenção: {e}")
-        if request: messages.warning(request, "Falha de rede ao conectar no SMTP do E-mail. Tente verificar o provedor na Configuração Global.")
+    config = EmailConfig.objects.first()
+    
+    if config and config.use_api:
+        _send_email_via_api(subject, html_message, list(emails), from_email, request)
+    else:
+        try:
+            send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
+        except Exception as e:
+            print(f"Erro ao enviar e-mail Manutenção: {e}")
+            if request: messages.warning(request, "Aviso: Falha de conexão SMTP ao enviar e-mail de Manutenção.")
 
     # Notificação Telegram
     msg = f"<b>🚨🛠️ ANOMALIA: MANUTENÇÃO ({veiculo_tipo})</b>\n"
@@ -305,10 +367,16 @@ def _send_forklift_anomaly_email(instance, request=None):
     plain_message = strip_tags(html_message)
 
     connection, from_email = _get_email_connection()
-    try:
-        send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
-    except Exception as e:
-        print(f"Erro ao enviar e-mail Empilhadeira: {e}")
+    config = EmailConfig.objects.first()
+    
+    if config and config.use_api:
+        _send_email_via_api(subject, html_message, list(emails), from_email, request)
+    else:
+        try:
+            send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
+        except Exception as e:
+            print(f"Erro ao enviar e-mail Empilhadeira: {e}")
+            if request: messages.warning(request, "Aviso: Falha de conexão SMTP ao enviar e-mail de Empilhadeira.")
 
 def _send_schedule_alerts(schedule, request=None):
     """Send Email and WhatsApp alerts for new maintenance schedules"""
@@ -326,11 +394,16 @@ def _send_schedule_alerts(schedule, request=None):
         plain_message = strip_tags(html_message)
         
         connection, from_email = _get_email_connection()
-        try:
-            send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
-        except Exception as e:
-            print(f"Erro ao enviar e-mail Agenda: {e}")
-            if request: messages.warning(request, "Aviso: O agendamento foi salvo, porém a tentativa de envio de E-mail de Alerta falhou por erro de conexão SMTP.")
+        config = EmailConfig.objects.first()
+        
+        if config and config.use_api:
+            _send_email_via_api(subject, html_message, list(emails), from_email, request)
+        else:
+            try:
+                send_mail(subject, plain_message, from_email, emails, html_message=html_message, fail_silently=False, connection=connection)
+            except Exception as e:
+                print(f"Erro ao enviar e-mail Agenda: {e}")
+                if request: messages.warning(request, "Aviso: O agendamento foi salvo, porém a tentativa de envio de E-mail de Alerta falhou por erro de conexão SMTP.")
 
     # 2. Telegram Alerts
     msg = f"<b>🚛 NOVO AGENDAMENTO DE MANUTENÇÃO</b>\n"
@@ -1033,6 +1106,10 @@ def system_admin_view(request):
             use_ssl = request.POST.get('use_ssl') == 'on'
             default_from = request.POST.get('default_from')
             
+            # API Fields
+            use_api = request.POST.get('use_api') == 'on'
+            resend_api_key = request.POST.get('resend_api_key')
+            
             config, created = EmailConfig.objects.get_or_create(id=1)
             config.host = host
             try:
@@ -1042,11 +1119,16 @@ def system_admin_view(request):
             config.user = user
             if password: # Update only if password is provided
                 config.password = password
+            
+            if resend_api_key: # Update only if key is provided
+                config.resend_api_key = resend_api_key
+            
             config.use_tls = use_tls
             config.use_ssl = use_ssl
+            config.use_api = use_api
             config.default_from = default_from
             config.save()
-            messages.success(request, 'Configurações de SMTP atualizadas com sucesso!')
+            messages.success(request, 'Configurações de E-mail (SMTP/API) atualizadas com sucesso!')
             
         elif action == 'update_telegram':
             if not request.user.is_superuser:
@@ -1277,17 +1359,22 @@ def _send_status_update_alerts(schedule, request):
             })
             
             connection, from_email = _get_email_connection()
-            try:
-                send_mail(
-                    subject,
-                    "",
-                    from_email,
-                    list(emails),
-                    html_message=html_content,
-                    connection=connection
-                )
-            except Exception as e:
-                print(f"Error sending status email: {e}")
+            config = EmailConfig.objects.first()
+            
+            if config and config.use_api:
+                _send_email_via_api(subject, html_content, list(emails), from_email, request)
+            else:
+                try:
+                    send_mail(
+                        subject,
+                        "",
+                        from_email,
+                        list(emails),
+                        html_message=html_content,
+                        connection=connection
+                    )
+                except Exception as e:
+                    print(f"Error sending status email: {e}")
 
         # Telegram Logic
         msg = f"<b>🔔 ATUALIZAÇÃO DE MANUTENÇÃO</b>\n"
