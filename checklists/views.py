@@ -1283,7 +1283,7 @@ def agenda_manutencao_view(request):
 
     context = {
         'events_json': json.dumps(events, cls=DjangoJSONEncoder),
-        'schedules': schedules,
+        'schedules': schedules[:100],  # Limit timeline to avoid UI/Performance lag
         'veiculos': veiculos,
         'today': timezone.now()
     }

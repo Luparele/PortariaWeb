@@ -133,30 +133,9 @@
                                     <p class="text-xs text-slate-600 leading-relaxed italic">"{{ s.descricao }}"</p>
                                 </div>
 
-                                <!-- History Log -->
-                                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                                    <p class="text-[9px] font-black text-slate-400 uppercase mb-3 tracking-widest flex items-center gap-1">
-                                        <i data-lucide="history" class="w-3 h-3"></i>
-                                        Linha de Ação
-                                    </p>
-                                    <div class="space-y-3">
-                                        <div class="flex gap-2 relative">
-                                            <div class="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1"></div>
-                                            <div>
-                                                <p class="text-[9px] font-bold text-slate-700 uppercase">Aberto como PENDENTE</p>
-                                                <p class="text-[8px] text-slate-400 uppercase font-black">{{ s.data_criacao|date:"d/m/Y H:i" }} por {{ s.criado_por.username }}</p>
-                                            </div>
-                                        </div>
-                                        {% for log in s.logs.all %}
-                                        <div class="flex gap-2 relative">
-                                            <div class="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1 {% if log.new_status == 'CONCLUIDO' %}bg-emerald-400{% elif log.new_status == 'CANCELADO' %}bg-red-400{% endif %}"></div>
-                                            <div>
-                                                <p class="text-[9px] font-bold text-slate-700 uppercase">Alterado para {{ log.get_new_status_display }}</p>
-                                                <p class="text-[8px] text-slate-400 uppercase font-black">{{ log.created_at|date:"d/m/Y H:i" }} por {{ log.user.username }}</p>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
+                                <div>
+                                    <p class="text-slate-400 text-[10px] font-black uppercase mb-1">Descrição do Serviço</p>
+                                    <p class="text-xs text-slate-600 leading-relaxed italic">"{{ s.descricao }}"</p>
                                 </div>
 
                                 {% if request.user.profile.role in 'MANUTENCAO,ADMIN,SUPERUSER' %}
