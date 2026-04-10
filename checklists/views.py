@@ -131,7 +131,7 @@ def _send_email_via_api(subject, html_content, recipient_list, from_email=None, 
             
             # Tratar erro específico de "Testing Mode" (Onboarding)
             if response.status_code == 403 and "send testing emails to your own email address" in str(err_body.get('message', '')):
-                if request: messages.warning(request, "Aviso: O Resend está em 'Modo de Teste'. Você só pode enviar e-mails para o dono da conta (eduardo.luparele@gmail.com) até validar seu domínio no painel do Resend.")
+                if request: messages.warning(request, "Aviso: O Resend está em 'Modo de Teste'. Você só pode enviar e-mails para o dono da conta (e-mail usado no cadastro do Resend) até validar seu domínio no painel do Resend.")
             elif request: 
                 messages.warning(request, f"Aviso: Falha ao enviar via API Web: {response.status_code}")
                 
