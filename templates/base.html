@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PORTARIA INTALOG</title>
+    <title>{% block title %}PORTARIA INTALOG{% endblock %}</title>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/img/pwa-icon.png">
     
@@ -36,7 +36,9 @@
             100% { transform: translateY(0px); }
         }
         .animate-float { animation: float 3s ease-in-out infinite; }
+        [x-cloak] { display: none !important; }
     </style>
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-slate-50 min-h-screen flex flex-col antialiased text-slate-900">
 
@@ -218,5 +220,6 @@
       if (webpushBtnMobile) webpushBtnMobile.addEventListener('click', subscribeAction);
     </script>
     {% endif %}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
