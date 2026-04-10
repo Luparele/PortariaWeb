@@ -147,22 +147,10 @@ def _send_single_telegram_message(chat_id, message):
     
     proxies = {"http": "http://proxy.server:3128", "https": "http://proxy.server:3128"} if os.environ.get('PYTHONANYWHERE_SITE') else None
     last_error = "Erro desconhecido"
+    
     for attempt in range(3):
         try:
             response = requests.post(url, json=payload, timeout=10, proxies=proxies)
-            if response.status_code == 200:
-                return True, "Success"
-            elif response.status_code in [502, 503, 504]:
-                time.sleep(1)
-                last_error = f"Erro no servidor do Telegram: {response.status_code}"
-            else:
-                return False, f"{response.status_code} - {response.text}"
-        except Exception as e:
-            last_error = str(e)
-            time.sleep(1)
-            
-    return False, last_error
-            response = requests.post(url, json=payload, timeout=10)
             if response.status_code == 200:
                 return True, "Mensagem enviada com sucesso!"
             
@@ -178,7 +166,7 @@ def _send_single_telegram_message(chat_id, message):
             elif response.status_code == 400:
                 return False, f"ID de Chat inválido ou erro no formato da mensagem (Erro 400: {desc})"
             elif response.status_code in [502, 503, 504]:
-                last_error = f"Instabilidade no Servidor/Proxy do PythonAnywhere (Erro {response.status_code})"
+                last_error = f"Instabilidade no Servidor/Proxy (Erro {response.status_code})"
                 time.sleep(1.5)
                 continue
             else:
