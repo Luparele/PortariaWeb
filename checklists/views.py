@@ -105,12 +105,12 @@ def _send_email_via_api(subject, html_content, recipient_list, from_email=None, 
         "Content-Type": "application/json"
     }
     
-    # Se estiver usando o domínio de teste do Resend, forçar o 'from' correto
-    sender = from_email or config.default_from or "onboarding@resend.dev"
-    if "resend.dev" in api_key or not config.default_from:
-         # Se a chave for de teste ou não houver remetente fixo, usar o padrão do Resend
-         if "re_Gym" in api_key: # Detectando a chave de onboarding do usuário
-             sender = "onboarding@resend.dev"
+    # FORÇA SENDER CORRETO PARA CHAVES DE ONBOARDING
+    # Se a chave começar com re_Gym (onboarding), o Resend EXIGE onboarding@resend.dev
+    if api_key.startswith("re_Gym"):
+        sender = "onboarding@resend.dev"
+    else:
+        sender = from_email or config.default_from or "onboarding@resend.dev"
 
     payload = {
         "from": sender,
@@ -137,9 +137,9 @@ def _send_email_via_api(subject, html_content, recipient_list, from_email=None, 
 def _send_telegram_message(message, request=None):
     """
     Sends a message to all active contacts in the AlertTelegram model
-    using the bot token from the database. Includes retries for proxy/network issues.
+    using the bot token from the database. Includes robust retries for proxy/network issues.
     """
-    import time, os
+    import time, os, random
     config = TelegramConfig.objects.first()
     if not config:
         print("Telegram configuration missing in database.")
@@ -153,6 +153,7 @@ def _send_telegram_message(message, request=None):
         return
 
     from django.contrib.auth.models import User
+    # Injected PA Proxy
     proxies = {"http": "http://proxy.server:3128", "https": "http://proxy.server:3128"} if os.environ.get('PYTHONANYWHERE_SITE') else None
     
     contacts = User.objects.exclude(profile__telegram_chat_id__isnull=True).exclude(profile__telegram_chat_id__exact='')
@@ -165,22 +166,27 @@ def _send_telegram_message(message, request=None):
             'parse_mode': 'HTML'
         }
         
-        for attempt in range(3):
+        # Robust Retry Loop for Proxy 503 errors
+        for attempt in range(4):
             try:
-                response = requests.post(url, json=payload, timeout=10, proxies=proxies)
+                response = requests.post(url, json=payload, timeout=15, proxies=proxies)
                 if response.status_code == 200:
                     break
                 elif response.status_code in [502, 503, 504]:
-                    time.sleep(1)
+                    # Proxy or Server temporary error
+                    sleep_time = (attempt + 1) * 2 + random.uniform(0, 1)
+                    time.sleep(sleep_time)
                 else:
                     print(f"Erro Telegram ({contact.profile.telegram_chat_id}): {response.status_code} - {response.text}")
-                    if request: messages.warning(request, f"Erro Telegram: Código {response.status_code}")
                     break
             except Exception as e:
                 name = contact.get_full_name() or contact.username
                 print(f"Erro ao enviar para {name} (Tentativa {attempt+1}): {e}")
-                if attempt == 2 and request: messages.warning(request, f"Falha na rede ao conectar no Telegram (Possível bloqueio de Proxy/Firewall).")
-                time.sleep(1)
+                if attempt == 3 and request: 
+                    messages.warning(request, f"Falha na rede ao conectar no Telegram (Possível bloqueio de Proxy/Firewall).")
+                # Exponential backoff with jitter
+                sleep_time = (attempt + 1) * 2 + random.uniform(0, 1)
+                time.sleep(sleep_time)
 
 def _send_single_telegram_message(chat_id, message):
     """Sends a message to a specific chat_id with retry logic and detailed error return"""
@@ -257,7 +263,7 @@ def _send_portaria_anomaly_email(checklist, request=None):
         'checklist': checklist,
         'items_nc': items_nc,
         'site_url': site_url,
-        'now': datetime.now()
+        'now': timezone.now()
     }
     
     html_message = render_to_string('emails/portaria_anomaly_email.html', context)
@@ -306,7 +312,7 @@ def _send_maintenance_alert(instance, veiculo_tipo, request=None):
         'items_nc': items_nc,
         'site_url': site_url,
         'm_type': 'truck' if veiculo_tipo == "CAMINHÃO" else 'trailer',
-        'now': datetime.now()
+        'now': timezone.now()
     }
     
     html_message = render_to_string('emails/maintenance_anomaly_email.html', context)
@@ -360,7 +366,7 @@ def _send_forklift_anomaly_email(instance, request=None):
         'items_nc': items_nc,
         'site_url': site_url,
         'duration_str': duration_str,
-        'now': datetime.now()
+        'now': timezone.now()
     }
     
     html_message = render_to_string('emails/forklift_anomaly_email.html', context)
@@ -388,7 +394,7 @@ def _send_schedule_alerts(schedule, request=None):
         context = {
             'schedule': schedule,
             'site_url': site_url,
-            'now': datetime.now()
+            'now': timezone.now()
         }
         html_message = render_to_string('emails/schedule_alert_email.html', context)
         plain_message = strip_tags(html_message)
@@ -1296,6 +1302,10 @@ def schedule_create_view(request):
 
             veiculo = get_object_or_404(Veiculo, id=veiculo_id)
             
+            # Converte as strings para objetos datetime e torna-os "timezone-aware"
+            data_paralizacao = timezone.make_aware(datetime.strptime(data_paralizacao, '%Y-%m-%dT%H:%M'))
+            data_previsao = timezone.make_aware(datetime.strptime(data_previsao, '%Y-%m-%dT%H:%M'))
+
             # Conflict Validation (Overlap)
             conflicts = MaintenanceSchedule.objects.filter(
                 veiculo=veiculo,
@@ -1360,7 +1370,7 @@ def _send_status_update_alerts(schedule, request):
                 'schedule': schedule,
                 'site_url': site_url,
                 'user': request.user,
-                'now': datetime.now(),
+                'now': timezone.now(),
                 'advise_checklist': schedule.status == 'CONCLUIDO'
             })
             
