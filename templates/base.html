@@ -133,7 +133,7 @@
                     <p class="text-[8px] font-bold text-blue-600 uppercase tracking-tighter mt-0.5">{{ request.user.profile.get_role_display|truncatechars:12 }}</p>
                 </div>
                 <div class="flex items-center">
-                    <button id="webpush-subscribe-button" class="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all hidden" title="Notificações">
+                    <button id="webpush-subscribe-button" class="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all hidden" title="Notificações PWA" data-url="{% url 'save_webpush_info' %}">
                         <i data-lucide="bell-off" class="w-4 h-4 lg:w-5 lg:h-5"></i>
                     </button>
                     <a href="{% url 'password_change' %}" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Senha">
@@ -158,7 +158,7 @@
         <header class="mb-8 text-center lg:hidden relative pt-4">
             {% if request.user.is_authenticated %}
             <div class="absolute top-4 right-0 flex items-center gap-4">
-                <button id="webpush-subscribe-button-mobile" class="text-slate-400 hidden transition-colors" title="Notificações PWA">
+                <button id="webpush-subscribe-button-mobile" class="text-slate-400 hidden transition-colors" title="Notificações PWA" data-url="{% url 'save_webpush_info' %}">
                     <i data-lucide="bell-off" class="w-5 h-5"></i>
                 </button>
                 <form method="post" action="{% url 'logout' %}" class="inline">
