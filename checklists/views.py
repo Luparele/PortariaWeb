@@ -873,6 +873,15 @@ def veiculo_list_view(request):
     veiculos = Veiculo.objects.all().order_by('tipo', 'placa')
     return render(request, 'veiculo_list.html', {'veiculos': veiculos})
 
+def log_pwa_event_local(user, msg):
+    """Helper to log PWA events to the log file"""
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    log_dir = os.path.join(settings.BASE_DIR, 'ARQUIVOS AUXILIARES', 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, 'pwa_debug.log')
+    with open(log_file, 'a', encoding='utf-8') as f:
+        f.write(f"[{now}] User: {user} | {msg}\n")
+
 @login_required
 @csrf_exempt
 def log_pwa_debug(request):
@@ -880,16 +889,7 @@ def log_pwa_debug(request):
         try:
             data = json.loads(request.body)
             msg = data.get('msg', 'No message')
-            user = request.user.username
-            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
-            log_dir = os.path.join(settings.BASE_DIR, 'ARQUIVOS AUXILIARES', 'logs')
-            os.makedirs(log_dir, exist_ok=True)
-            log_file = os.path.join(log_dir, 'pwa_debug.log')
-            
-            with open(log_file, 'a', encoding='utf-8') as f:
-                f.write(f"[{now}] User: {user} | {msg}\n")
-            
+            log_pwa_event_local(request.user.username, msg)
             return JsonResponse({'status': 'ok'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'msg': str(e)}, status=400)
@@ -907,12 +907,22 @@ def home_view(request):
             }
             try:
                 # Verify if user has webpush subscriptions
-                if not hasattr(request.user, 'webpush_info') or request.user.webpush_info.count() == 0:
+            try:
+                # Verify if user has webpush subscriptions
+                sub_count = 0
+                if hasattr(request.user, 'webpush_info'):
+                    sub_count = request.user.webpush_info.count()
+                
+                log_pwa_event_local(request.user.username, f"BACKEND: Tentativa de ENVIO TESTE. Inscritos: {sub_count}")
+
+                if sub_count == 0:
                     messages.error(request, 'Erro: Seu navegador ainda não está inscrito. Clique no ícone do sino para ativar.')
                 else:
                     send_user_notification(user=request.user, payload=payload, ttl=1000)
+                    log_pwa_event_local(request.user.username, "BACKEND: Notificação disparada com SUCESSO via send_user_notification.")
                     messages.success(request, 'Notificação Push enviada com sucesso para este aparelho!')
             except Exception as e:
+                log_pwa_event_local(request.user.username, f"BACKEND: ERRO ao disparar notificação: {str(e)}")
                 messages.error(request, f'Erro ao disparar PWA Push: {str(e)}')
             return redirect('home')
 

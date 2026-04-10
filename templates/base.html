@@ -35,8 +35,14 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('Service Worker registrado!', reg))
-            .catch(err => console.log('Erro ao registrar Service Worker:', err));
+            .then(reg => {
+                console.log('Service Worker registrado!', reg);
+                if (typeof logPWA === 'function') logPWA(`SW REGISTRO: SUCESSO. Escopo: ${reg.scope}`);
+            })
+            .catch(err => {
+                console.error('Erro ao registrar Service Worker:', err);
+                if (typeof logPWA === 'function') logPWA(`SW REGISTRO: ERRO. ${err.message}`);
+            });
         });
       }
     </script>
@@ -239,26 +245,46 @@
 
       // Check subscription status on load
       window.addEventListener('load', () => {
+          logPWA('Página carregada. Verificando estado do Service Worker...');
           if ('serviceWorker' in navigator && 'PushManager' in window) {
               navigator.serviceWorker.ready.then(registration => {
+                  logPWA('SW READY: Service Worker pronto e ativo.');
                   registration.pushManager.getSubscription().then(subscription => {
-                      updateWebpushUI(!!subscription);
+                      const isSub = !!subscription;
+                      logPWA(`ESTADO INICIAL: ${isSub ? 'INSCRITO' : 'NÃO INSCRITO'}`);
+                      if (isSub) logPWA(`ENDPOINT: ${subscription.endpoint.substring(0, 50)}...`);
+                      updateWebpushUI(isSub);
+                      if (typeof updateCardUI === 'function') updateCardUI(isSub);
                   });
               });
+          } else {
+              if (!('serviceWorker' in navigator)) logPWA('ALERTA: Navegador não suporta Service Worker.');
+              if (!('PushManager' in window)) logPWA('ALERTA: Navegador não suporta PushManager.');
           }
       });
 
       const subscribeAction = () => {
           logPWA('Clique no botão de inscrição detectado.');
+          
+          if (!window.isSecureContext) {
+              logPWA('ERRO: Contexto não seguro (Requer HTTPS ou localhost/127.0.0.1).');
+              alert('Notificações Push requerem um ambiente seguro (HTTPS).');
+              return;
+          }
+
           if (!('serviceWorker' in navigator)) {
               logPWA('ERRO: Service Worker não suportado neste navegador.');
               return;
           }
+
+          logPWA(`Status de permissão atual: ${Notification.permission}`);
+          
           navigator.serviceWorker.ready.then(registration => {
-              logPWA('Service Worker pronto para inscrição.');
+              logPWA('Service Worker READY (Pronto).');
               registration.pushManager.getSubscription().then(subscription => {
                   if (subscription) {
-                      logPWA('Tentando cancelar inscrição existente...');
+                      logPWA(`Inscrição existente encontrada: ${subscription.endpoint.substring(0, 30)}...`);
+                      logPWA('Tentando cancelar inscrição existente para renovação...');
                       subscription.unsubscribe().then(successful => {
                           if (successful) {
                               logPWA('Inscrição cancelada com sucesso.');
@@ -267,23 +293,41 @@
                           } else {
                               logPWA('FALHA ao cancelar inscrição.');
                           }
-                      });
+                      }).catch(err => logPWA(`ERRO no unsubscribe: ${err.message}`));
                   } else {
-                      logPWA('Iniciando processo de nova inscrição (subscribe)...');
+                      logPWA('Nenhuma inscrição encontrada. Solicitando nova inscrição...');
                       if (typeof subscribe === 'function') {
-                          subscribe();
-                          setTimeout(() => {
-                            registration.pushManager.getSubscription().then(sub => {
-                                logPWA(sub ? 'Nova inscrição realizada com sucesso!' : 'AVISO: Inscrição não detectada após 2 segundos.');
-                                updateWebpushUI(!!sub);
-                                if (typeof updateCardUI === 'function') updateCardUI(!!sub);
-                            });
-                          }, 2000);
+                          logPWA('Chamando função global subscribe()...');
+                          try {
+                              subscribe();
+                              logPWA('Função subscribe() chamada. Aguardando processamento do navegador...');
+                              
+                              // Check multiple times
+                              let attempts = 0;
+                              const checkInterval = setInterval(() => {
+                                  attempts++;
+                                  registration.pushManager.getSubscription().then(sub => {
+                                      if (sub) {
+                                          logPWA(`SUCESSO: Nova inscrição detectada na tentativa ${attempts}!`);
+                                          updateWebpushUI(true);
+                                          if (typeof updateCardUI === 'function') updateCardUI(true);
+                                          clearInterval(checkInterval);
+                                      } else if (attempts >= 5) {
+                                          logPWA('AVISO: Inscrição não detectada após 5 tentativas (10 segundos).');
+                                          clearInterval(checkInterval);
+                                      }
+                                  });
+                              }, 2000);
+                          } catch (err) {
+                              logPWA(`EXCEÇÃO ao chamar subscribe(): ${err.message}`);
+                          }
                       } else {
-                          logPWA('ERRO: Função global "subscribe" (do django-webpush) não encontrada.');
+                          logPWA('ERRO CRÍTICO: Função global "subscribe" (do django-webpush) não encontrada no DOM.');
                       }
                   }
-              });
+              }).catch(err => logPWA(`ERRO ao acessar getSubscription(): ${err.message}`));
+          }).catch(err => {
+              logPWA(`ERRO: navigator.serviceWorker.ready falhou: ${err.message}`);
           });
       };
 
