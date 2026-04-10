@@ -84,8 +84,9 @@ def _get_email_connection():
 def _send_telegram_message(message):
     """
     Sends a message to all active contacts in the AlertTelegram model
-    using the bot token from the database.
+    using the bot token from the database. Includes retries for proxy/network issues.
     """
+    import time
     config = TelegramConfig.objects.first()
     if not config:
         print("Telegram configuration missing in database.")
@@ -104,20 +105,31 @@ def _send_telegram_message(message):
             'text': message,
             'parse_mode': 'HTML'
         }
-        try:
-            requests.post(url, json=payload, timeout=10)
-        except Exception as e:
-            print(f"Erro ao enviar para {contact.nome}: {e}")
+        
+        for attempt in range(3):
+            try:
+                response = requests.post(url, json=payload, timeout=10)
+                if response.status_code == 200:
+                    break
+                elif response.status_code in [502, 503, 504]:
+                    time.sleep(1)
+                else:
+                    print(f"Erro Telegram ({contact.chat_id}): {response.status_code} - {response.text}")
+                    break
+            except Exception as e:
+                print(f"Erro ao enviar para {contact.nome} (Tentativa {attempt+1}): {e}")
+                time.sleep(1)
 
 def _send_single_telegram_message(chat_id, message):
-    """Sends a message to a specific chat_id"""
+    """Sends a message to a specific chat_id with retry logic and detailed error return"""
+    import time
     config = TelegramConfig.objects.first()
     if not config:
-        return False
+        return False, "Configuração do bot não encontrada no sistema."
     
     bot_token = config.get_decrypted_token()
     if not bot_token:
-        return False
+        return False, "Token do bot não configurado ou inválido."
         
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {
@@ -125,14 +137,40 @@ def _send_single_telegram_message(chat_id, message):
         'text': message,
         'parse_mode': 'HTML'
     }
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        if response.status_code != 200:
-            print(f"Erro Telegram ({chat_id}): {response.status_code} - {response.text}")
-        return response.status_code == 200
-    except Exception as e:
-        print(f"Erro ao enviar mensagem simples: {e}")
-        return False
+    
+    last_error = "Erro desconhecido"
+    for attempt in range(3):
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                return True, "Mensagem enviada com sucesso!"
+            
+            # Extract detailed error from Telegram
+            try:
+                error_data = response.json()
+                desc = error_data.get('description', 'Erro sem descrição')
+            except:
+                desc = f"Servidor/Proxy retornou Erro {response.status_code}"
+            
+            if response.status_code == 403:
+                return False, f"O bot foi bloqueado pelo usuário (Erro 403: {desc})"
+            elif response.status_code == 400:
+                return False, f"ID de Chat inválido ou erro no formato da mensagem (Erro 400: {desc})"
+            elif response.status_code in [502, 503, 504]:
+                last_error = f"Instabilidade no Servidor/Proxy do PythonAnywhere (Erro {response.status_code})"
+                time.sleep(1.5)
+                continue
+            else:
+                return False, f"Erro do Telegram: {response.status_code} - {desc}"
+                
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.ProxyError) as e:
+            last_error = f"Erro de Conexão/Proxy (PythonAnywhere): {str(e)}"
+            time.sleep(1)
+        except Exception as e:
+            last_error = f"Erro inesperado: {str(e)}"
+            time.sleep(1)
+            
+    return False, f"Falha após 3 tentativas. Motivo: {last_error}"
 
 def _send_portaria_anomaly_email(checklist, request=None):
     """Standalone function to send Portaria anomaly alerts (replaces legacy ViewSet method)"""
@@ -951,20 +989,11 @@ def system_admin_view(request):
             nome = request.POST.get('nome')
             msg = f"<b>🚀 TESTE DE CONEXÃO</b>\n\nOlá {nome}, esta é uma mensagem de teste da <b>Central Operacional Check-up & Manutenção - Intalog</b>.\n\n⚠️ <i>Por favor, não responda a esta mensagem.</i>"
             
-            # Improved diagnostics
-            config = TelegramConfig.objects.first()
-            if not config:
-                messages.error(request, 'Configuração do Bot do Telegram não encontrada. Por favor, cadastre o Token.')
-                return redirect('system_admin')
-                
-            success = _send_single_telegram_message(chat_id, msg)
+            success, error_msg = _send_single_telegram_message(chat_id, msg)
             if success:
                 messages.success(request, f'Mensagem de teste enviada com sucesso para {nome}!')
             else:
-                # We can't easily capture the error and pass it up without changing helper signature, 
-                # but we've already added a print in the console. 
-                # For the user, let's give more specific advice.
-                messages.error(request, f'Falha ao enviar para {nome}. Motivos prováveis: 1. Token incorreto; 2. O usuário não iniciou o bot; 3. ID do chat inválido.')
+                messages.error(request, f'Falha ao enviar para {nome}: {error_msg}')
             
         elif action == 'unlink_telegram_user':
             user_id = request.POST.get('user_id')
