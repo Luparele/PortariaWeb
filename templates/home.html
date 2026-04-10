@@ -46,7 +46,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         <!-- SECTION: OPERAÇÃO PORTARIA -->
-        {% if request.user.profile.role == 'ADMIN' or request.user.profile.role == 'GESTOR' or request.user.profile.role == 'CONTROLADOR' %}
+        {% if request.user.profile.role == 'CONTROLADOR' or request.user.profile.role == 'SUPERUSER' %}
         <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
             <div class="relative p-6">
@@ -64,7 +64,7 @@
         {% endif %}
 
         <!-- SECTION: MANUTENÇÃO -->
-        {% if request.user.profile.role == 'ADMIN' or request.user.profile.role == 'GESTOR' or request.user.profile.role == 'MANUTENCAO' %}
+        {% if request.user.profile.role == 'MANUTENCAO' or request.user.profile.role == 'SUPERUSER' %}
         <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
             <div class="relative p-6">
@@ -94,26 +94,10 @@
                 </a>
             </div>
         </div>
-
-        <!-- SECTION: AGENDA DE MANUTENÇÃO -->
-        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
-            <div class="relative p-6">
-                <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
-                    <i data-lucide="calendar-days" class="w-7 h-7"></i>
-                </div>
-                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Agenda de Manutenção</h3>
-                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Cronograma preventivo, calendário de paralização e linha do tempo da frota.</p>
-                <a href="{% url 'agenda_manutencao' %}" class="flex items-center justify-between bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-200 transition-all">
-                    Abrir Agenda
-                    <i data-lucide="calendar" class="w-4 h-4"></i>
-                </a>
-            </div>
-        </div>
         {% endif %}
 
-        <!-- SECTION: EMPILHADEIRA -->
-        {% if request.user.profile.role != 'PUBLICO' %}
+        <!-- SECTION: EMPILHADEIRA (Depot, Admin e Superuser) -->
+        {% if request.user.profile.role == 'DEPOT' or request.user.profile.role == 'ADMIN' or request.user.profile.role == 'SUPERUSER' %}
         <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
             <div class="relative p-6">
@@ -130,8 +114,26 @@
         </div>
         {% endif %}
 
-        <!-- SECTION: GESTÃO (RESTRICTED) -->
-        {% if request.user.profile.role == 'ADMIN' or request.user.profile.role == 'GESTOR' %}
+        <!-- SECTION: AGENDA DE MANUTENÇÃO (Manutenção, Gestor, Admin e Superuser) -->
+        {% if request.user.profile.role in 'MANUTENCAO,GESTOR,ADMIN,SUPERUSER' %}
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="calendar-days" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Agenda de Manutenção</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Cronograma preventivo, calendário de paralização e linha do tempo da frota.</p>
+                <a href="{% url 'agenda_manutencao' %}" class="flex items-center justify-between bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-200 transition-all">
+                    Abrir Agenda
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- SECTION: RELATÓRIOS (Manutenção, Gestor, Admin e Superuser) -->
+        {% if request.user.profile.role in 'MANUTENCAO,GESTOR,ADMIN,SUPERUSER' %}
         <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
             <div class="relative p-6">
@@ -146,7 +148,34 @@
                 </a>
             </div>
         </div>
+        {% endif %}
+        
+        <!-- SECTION: TELEGRAM (Novo - Vínculo Automático) -->
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-sky-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-sky-500 text-white rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="send" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Alertas Telegram</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Vincule seu perfil ao nosso bot para receber alertas críticos e atualizações em tempo real.</p>
+                
+                {% if request.user.profile.telegram_chat_id %}
+                    <div class="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-emerald-100 italic">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        Vínculo Ativo
+                    </div>
+                {% else %}
+                    <a href="{% url 'telegram_activate' %}" class="flex items-center justify-between bg-sky-500 hover:bg-sky-600 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-sky-200 transition-all">
+                        Ativar Alertas
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
 
+        <!-- SECTION: ADMINISTRAÇÃO (Admin e Superuser) -->
+        {% if request.user.profile.role in 'ADMIN,SUPERUSER' %}
         <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden md:col-span-2 lg:col-span-1">
             <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
             <div class="relative p-6">

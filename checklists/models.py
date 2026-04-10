@@ -8,13 +8,16 @@ import uuid
 class Profile(models.Model):
     ROLES = [
         ('ADMIN', 'Admin'),
+        ('SUPERUSER', 'Superusuário (Acesso Total)'),
         ('GESTOR', 'Gestor'),
         ('CONTROLADOR', 'Controlador de Acesso'),
         ('MANUTENCAO', 'Manutenção'),
+        ('DEPOT', 'Depot (Empilhadeiras)'),
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=20, choices=ROLES, default='CONTROLADOR')
     cpf = models.CharField(max_length=14, blank=True, null=True)
+    telegram_chat_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="ID do Telegram")
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
@@ -36,29 +39,32 @@ class Veiculo(models.Model):
         ('CAVALO', 'Cavalo Mecânico'),
         ('CARRETA', 'Carreta'),
     ]
+
+    CATEGORIA_CHOICES = [
+        ('BUGGY', 'Buggy'),
+        ('BUGGY_20', 'Buggy 20'),
+        ('CARRETA', 'Carreta'),
+        ('BAU_SECO', 'Baú Seco'),
+        ('BAU_REFRI', 'Baú Refrigerado'),
+        ('SIDER', 'Sider'),
+        ('PRANCHA', 'Prancha'),
+    ]
+
     placa = models.CharField(max_length=10, unique=True)
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    id_frota = models.CharField(max_length=50, blank=True, null=True)
-    marca = models.CharField(max_length=50, blank=True, null=True)
-    modelo = models.CharField(max_length=50, blank=True, null=True)
-    ano_fabricacao = models.IntegerField(blank=True, null=True)
-    ano_modelo = models.IntegerField(blank=True, null=True)
+    marca_modelo = models.CharField(max_length=100, default='')
+    renavam = models.CharField(max_length=20, blank=True, null=True)
+    ano = models.CharField(max_length=20, default='')
+    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, blank=True, null=True)
 
     class Meta:
         verbose_name = "Veículo"
         verbose_name_plural = "Veículos"
 
     def __str__(self):
-        return f"{self.placa} ({self.get_tipo_display()})"
+        return f"{self.placa} ({self.marca_modelo})"
 
 class Checklist(models.Model):
-    EQUIPMENT_CHOICES = [
-        ('PRANCHA', 'Prancha'),
-        ('TAMPA', 'Com Tampa'),
-        ('BUGRE_20', "Bugre 20'"),
-        ('BITREM', 'Bitrem'),
-    ]
-
     STATUS_CHOICES = [
         ('SIM', 'Sim'),
         ('NAO', 'Não'),
@@ -70,7 +76,6 @@ class Checklist(models.Model):
     placa_carreta_01 = models.ForeignKey(Veiculo, on_delete=models.SET_NULL, related_name='checklists_carreta1', blank=True, null=True, limit_choices_to={'tipo': 'CARRETA'})
     placa_carreta_02 = models.ForeignKey(Veiculo, on_delete=models.SET_NULL, related_name='checklists_carreta2', blank=True, null=True, limit_choices_to={'tipo': 'CARRETA'})
     doc_carreta_entregue = models.BooleanField(default=False)
-    tipo_equipamento = models.CharField(max_length=20, choices=EQUIPMENT_CHOICES, default='PRANCHA')
     
     # Parte Eletrica
     eletrica_condicoes = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
@@ -561,3 +566,17 @@ class ChecklistPhoto(models.Model):
 
     def __str__(self):
         return f"Foto {self.id} - {self.content_object}"
+
+class TelegramToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='telegram_tokens')
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+
+    def is_expired(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        return timezone.now() > self.created_at + timedelta(minutes=10)
+
+    def __str__(self):
+        return f"Token for {self.user.username} - {self.token}"

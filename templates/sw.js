@@ -37,3 +37,30 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Push Notification Event
+self.addEventListener('push', function (event) {
+    if (event.data) {
+        const data = event.data.json();
+        const options = {
+            body: data.body,
+            icon: data.icon || '/static/img/pwa-icon.png',
+            badge: '/static/img/pwa-icon.png',
+            vibrate: [100, 50, 100],
+            data: {
+                url: data.url || '/'
+            }
+        };
+        event.waitUntil(
+            self.registration.showNotification(data.title, options)
+        );
+    }
+});
+
+// Notification Click Event
+self.addEventListener('notificationclick', function (event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow(event.notification.data.url)
+    );
+});

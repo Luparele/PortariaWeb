@@ -26,9 +26,9 @@ class CondutorAdmin(admin.ModelAdmin):
 
 @admin.register(Veiculo)
 class VeiculoAdmin(admin.ModelAdmin):
-    list_display = ('placa', 'tipo', 'id_frota', 'marca', 'modelo')
-    list_filter = ('tipo', 'marca')
-    search_fields = ('placa', 'id_frota')
+    list_display = ('placa', 'tipo', 'marca_modelo', 'ano', 'categoria')
+    list_filter = ('tipo', 'categoria')
+    search_fields = ('placa', 'marca_modelo', 'renavam')
 
 @admin.register(AlertEmail)
 class AlertEmailAdmin(admin.ModelAdmin):
@@ -39,7 +39,7 @@ class AlertEmailAdmin(admin.ModelAdmin):
 @admin.register(Checklist)
 class ChecklistAdmin(admin.ModelAdmin):
     list_display = ('placa_cavalo', 'nome_motorista', 'porteiro', 'data_criacao')
-    list_filter = ('tipo_equipamento', 'data_criacao')
+    list_filter = ('data_criacao',)
     search_fields = ('placa_cavalo', 'nome_motorista', 'placa_carreta_01', 'placa_carreta_02')
 
 @admin.register(MaintenanceTruck)

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'webpush',
     'checklists',
 ]
 
@@ -156,3 +157,10 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 LOGIN_URL = '/login/'
+
+# WebPush Settings
+WEBPUSH_SETTINGS = {
+    "VAPID_PUBLIC_KEY": "BEyi2KIhYPbStDJFH7C7TdWln_vZhdQgfq0muOVIkBXbyHR9vBfvuPuvKRs0EBm7NE6q08033GujiHcWHnnFVro",
+    "VAPID_PRIVATE_KEY": "ZJjTZoCx1yCY5vb0IbffGRLRT3Uz7-IRTY2vxm35mtg",
+    "VAPID_ADMIN_EMAIL": "admin@intalog.com.br"
+}

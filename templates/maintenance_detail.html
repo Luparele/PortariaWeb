@@ -44,7 +44,7 @@
             <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar ao Painel
         </a>
         <div class="flex items-center gap-3">
-            {% if checklist.has_nc and not checklist.is_resolved and request.user.profile.role in 'ADMIN,GESTOR,MANUTENCAO' %}
+            {% if checklist.has_nc and not checklist.is_resolved and request.user.profile.role in 'MANUTENCAO,ADMIN,SUPERUSER' %}
             <form action="{% url 'resolve_checklist' m_type checklist.id %}" method="POST" id="resolveForm">
                 {% csrf_token %}
                 <button type="button" onclick="confirmResolution()" class="flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-xl hover:bg-amber-600 transition-all font-bold text-sm uppercase tracking-tight shadow-lg shadow-amber-500/20 border border-amber-600">
@@ -129,13 +129,26 @@
                     <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Identificação</h3>
                 </div>
                 <div class="p-6">
-                    <div class="grid grid-cols-1 gap-y-6">
-                        {% include 'partials/info_item.html' with label='Veículo' value=checklist.veiculo.placa icon='truck' %}
-                        {% include 'partials/info_item.html' with label='Modelo' value=checklist.veiculo.modelo|default:"-" %}
-                        {% include 'partials/info_item.html' with label='Motorista' value=checklist.motorista.nome icon='user' %}
-                        {% include 'partials/info_item.html' with label='CPF' value=checklist.motorista.cpf %}
+                    <div class="grid grid-cols-1 gap-y-4">
+                        <div class="grid grid-cols-2 gap-4 border-b border-slate-50 pb-4">
+                            {% include 'partials/info_item.html' with label='Placa' value=checklist.veiculo.placa icon='truck' %}
+                            {% include 'partials/info_item.html' with label='Marca / Modelo' value=checklist.veiculo.marca_modelo|default:"-" %}
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 border-b border-slate-50 pb-4">
+                            {% include 'partials/info_item.html' with label='Ano' value=checklist.veiculo.ano|default:"-" %}
+                            {% include 'partials/info_item.html' with label='RENAVAN' value=checklist.veiculo.renavam|default:"-" %}
+                            {% if checklist.veiculo.tipo == 'CARRETA' %}
+                            {% include 'partials/info_item.html' with label='Categoria' value=checklist.veiculo.get_categoria_display|default:"-" %}
+                            {% endif %}
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            {% include 'partials/info_item.html' with label='Motorista' value=checklist.motorista.nome icon='user' %}
+                            {% include 'partials/info_item.html' with label='CPF' value=checklist.motorista.cpf %}
+                        </div>
                         {% if m_type == 'truck' %}
-                        {% include 'partials/info_item.html' with label='KM Atual' value=checklist.quilometragem|default:"-" icon='gauge' %}
+                        <div class="pt-2">
+                             {% include 'partials/info_item.html' with label='KM Atual' value=checklist.quilometragem|default:"-" icon='gauge' %}
+                        </div>
                         {% endif %}
                     </div>
                 </div>

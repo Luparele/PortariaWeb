@@ -46,7 +46,8 @@
                     <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">
                         <th class="px-6 py-4 text-center">Tipo</th>
                         <th class="px-6 py-4">Placa</th>
-                        <th class="px-6 py-4">Modelo</th>
+                        <th class="px-6 py-4">Marca / Modelo</th>
+                        <th class="px-6 py-4">Ano</th>
                         <th class="px-6 py-4 text-center">Ações</th>
                     </tr>
                 </thead>
@@ -62,7 +63,8 @@
                             <span class="hidden item-tipo">{{ v.tipo }}</span>
                         </td>
                         <td class="px-6 py-4 text-sm font-bold text-slate-800 uppercase item-placa">{{ v.placa }}</td>
-                        <td class="px-6 py-4 text-xs font-bold text-slate-500 uppercase item-modelo">{{ v.modelo|default:"-" }}</td>
+                        <td class="px-6 py-4 text-xs font-bold text-slate-500 uppercase item-modelo">{{ v.marca_modelo|default:"-" }}</td>
+                        <td class="px-6 py-4 text-xs font-bold text-slate-400 uppercase item-ano">{{ v.ano|default:"-" }}</td>
                         <td class="px-6 py-4 text-center">
                             <form method="post" action="{% url 'veiculo_list' %}" onsubmit="return confirm('Deseja excluir este veículo?');">
                                 {% csrf_token %}
@@ -121,8 +123,34 @@
                 </div>
                 
                 <div>
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Modelo / Detalhes</label>
-                    <input name="modelo" type="text" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 font-bold uppercase text-sm text-slate-600 outline-none transition-all mt-1" />
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Marca / Modelo</label>
+                    <input required name="marca_modelo" placeholder="EX: VOLVO FH 540" type="text" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 font-bold uppercase text-sm text-slate-600 outline-none transition-all mt-1" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Ano</label>
+                        <input required name="ano" placeholder="2024" type="text" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 font-bold uppercase text-sm text-slate-600 outline-none transition-all mt-1" />
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-400 ml-1">RENAVAN (Opceional)</label>
+                        <input name="renavam" placeholder="00000000000" type="text" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 font-bold uppercase text-sm text-slate-600 outline-none transition-all mt-1" />
+                    </div>
+                </div>
+
+                <!-- Campo Categoria (Apenas para Carreta) -->
+                <div id="categoriaContainer" class="hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Categoria da Carreta</label>
+                    <select name="categoria" class="w-full bg-slate-50 border-0 rounded-xl px-4 py-4 focus:ring-2 focus:ring-emerald-500 font-bold text-sm h-[56px] outline-none transition-all cursor-pointer mt-1">
+                        <option value="">Selecione a Categoria</option>
+                        <option value="BUGGY">BUGGY</option>
+                        <option value="BUGGY_20">BUGGY 20</option>
+                        <option value="CARRETA">CARRETA</option>
+                        <option value="BAU_SECO">BAÚ SECO</option>
+                        <option value="BAU_REFRI">BAÚ REFRIGERADO</option>
+                        <option value="SIDER">SIDER</option>
+                        <option value="PRANCHA">PRANCHA</option>
+                    </select>
                 </div>
                 
                 <div class="pt-4">
@@ -136,6 +164,17 @@
 </div>
 
 <script>
+    // Mostrar/Esconder Categoria baseado no Tipo
+    document.querySelectorAll('input[name="tipo"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const container = document.getElementById('categoriaContainer');
+            if (this.value === 'CARRETA') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        });
+    });
     // Filtro JS
     function filterTable() {
         const input = document.getElementById("searchInput");

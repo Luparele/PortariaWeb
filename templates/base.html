@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Check-up & Manutenção{% endblock %}</title>
+    {% load webpush_notifications %}
     
     <!-- Tailwind CSS (via CDN para desenvolvimento) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -64,15 +65,14 @@
                 </a>
                        {% if request.user.is_authenticated %}
                     <!-- Checklist Portaria -->
-                    {% if request.user.profile.role in 'CONTROLADOR,ADMIN' %}
+                    {% if request.user.profile.role == 'CONTROLADOR' or request.user.profile.role == 'SUPERUSER' %}
                     <a href="{% url 'portaria_create' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-blue-600 group">
                         <i data-lucide="shield-check" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
                         <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[65px]">Checklist<br>Portaria</span>
                     </a>
                     {% endif %}
 
-                    <!-- Manutenção Física -->
-                    {% if request.user.profile.role in 'MANUTENCAO,ADMIN' %}
+                    {% if request.user.profile.role == 'MANUTENCAO' or request.user.profile.role == 'SUPERUSER' %}
                     <a href="{% url 'maintenance_create' 'truck' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-amber-600 group">
                         <i data-lucide="truck" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
                         <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[65px]">Mnt<br>Caminhão</span>
@@ -81,6 +81,9 @@
                         <i data-lucide="container" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
                         <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[65px]">Mnt<br>Carreta</span>
                     </a>
+                    {% endif %}
+
+                    {% if request.user.profile.role == 'DEPOT' or request.user.profile.role == 'ADMIN' or request.user.profile.role == 'SUPERUSER' %}
                     <a href="{% url 'forklift_create' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-indigo-600 group">
                         <i data-lucide="forklift" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
                         <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[70px]">Checklist<br>Empilhadeira</span>
@@ -88,11 +91,14 @@
                     {% endif %}
 
                     <!-- Gestão & Planejamento -->
-                    {% if request.user.profile.role in 'MANUTENCAO,ADMIN,GESTOR' %}
+                    {% if request.user.profile.role in 'MANUTENCAO,GESTOR,ADMIN,SUPERUSER' %}
                     <a href="{% url 'agenda_manutencao' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-red-600 group">
                         <i data-lucide="calendar-range" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
                         <span class="text-[9px] uppercase font-bold text-center leading-[1.1] max-w-[70px]">Agenda<br>Mnt</span>
                     </a>
+                    {% endif %}
+
+                    {% if request.user.profile.role in 'MANUTENCAO,GESTOR,ADMIN,SUPERUSER' %}
                     <a href="{% url 'dashboard' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-600 hover:text-blue-600 group">
                         <i data-lucide="bar-chart-3" class="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
                         <span class="text-[9px] uppercase font-bold text-center leading-[1.1]">Relatórios</span>
@@ -100,7 +106,7 @@
                     {% endif %}
 
                     <!-- Admin Tools (Desktop/Tablet) -->
-                    {% if request.user.profile.role == 'ADMIN' %}
+                    {% if request.user.profile.role in 'ADMIN,SUPERUSER' %}
                     <div class="hidden md:flex items-center gap-2 lg:gap-4 border-l border-slate-100 pl-2 lg:pl-6 ml-1 lg:ml-4">
                         <a href="{% url 'condutor_list' %}" class="flex flex-col items-center gap-1 transition-colors text-slate-500 hover:text-blue-600 group" title="Motoristas">
                             <i data-lucide="user-plus" class="w-5 h-5 group-hover:scale-105 transition-transform"></i>
@@ -127,6 +133,9 @@
                     <p class="text-[8px] font-bold text-blue-600 uppercase tracking-tighter mt-0.5">{{ request.user.profile.get_role_display|truncatechars:12 }}</p>
                 </div>
                 <div class="flex items-center">
+                    <button id="webpush-subscribe-button" class="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all hidden" title="Ativar Notificações">
+                        <i data-lucide="bell-off" class="w-4 h-4 lg:w-5 lg:h-5"></i>
+                    </button>
                     <a href="{% url 'password_change' %}" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Alterar Senha">
                         <i data-lucide="key-round" class="w-4 h-4 lg:w-5 lg:h-5"></i>
                     </a>
@@ -143,6 +152,9 @@
             <!-- Logout Mobile (Overlay ou Dropdown no futuro, hoje visível no centro/direita do mobile) -->
             {% if request.user.is_authenticated %}
                 <div class="flex items-center gap-3 md:hidden pr-2">
+                    <button id="webpush-subscribe-button-mobile" class="p-2 text-slate-400 hidden" title="Notificações">
+                        <i data-lucide="bell-off" class="w-6 h-6"></i>
+                    </button>
                     <a href="{% url 'password_change' %}" class="p-2 text-indigo-600" title="Senha">
                         <i data-lucide="key-round" class="w-6 h-6"></i>
                     </a>
@@ -187,5 +199,72 @@
     <script>
       lucide.createIcons();
     </script>
+
+    <!-- WebPush Logic -->
+    {% if request.user.is_authenticated %}
+    {% webpush_header %}
+    <script>
+      const webpushBtn = document.getElementById('webpush-subscribe-button');
+      const webpushBtnMobile = document.getElementById('webpush-subscribe-button-mobile');
+
+      function updateWebpushUI(isSubscribed) {
+          const btns = [webpushBtn, webpushBtnMobile];
+          btns.forEach(btn => {
+              if (!btn) return;
+              btn.classList.remove('hidden');
+              const icon = btn.querySelector('i');
+              if (isSubscribed) {
+                  btn.classList.replace('text-slate-400', 'text-amber-500');
+                  btn.title = "Notificações Ativas";
+                  if (icon) icon.setAttribute('data-lucide', 'bell');
+              } else {
+                  btn.classList.replace('text-amber-500', 'text-slate-400');
+                  btn.title = "Ativar Notificações";
+                  if (icon) icon.setAttribute('data-lucide', 'bell-off');
+              }
+          });
+          lucide.createIcons();
+      }
+
+      // Check subscription status on load
+      window.addEventListener('load', () => {
+          if ('serviceWorker' in navigator && 'PushManager' in window) {
+              navigator.serviceWorker.ready.then(registration => {
+                  registration.pushManager.getSubscription().then(subscription => {
+                      updateWebpushUI(!!subscription);
+                  });
+              });
+          }
+      });
+
+      const subscribeAction = () => {
+          navigator.serviceWorker.ready.then(registration => {
+              registration.pushManager.getSubscription().then(subscription => {
+                  if (subscription) {
+                      // Unsubscribe logic if needed, but here we just toggle
+                      subscription.unsubscribe().then(successful => {
+                          if (successful) updateWebpushUI(false);
+                      });
+                  } else {
+                      // Use the helper from webpush_header
+                      if (typeof subscribe === 'function') {
+                          subscribe();
+                          // The webpush library doesn't always provide a callback here, 
+                          // so we check periodically or just rely on the next load.
+                          // Fortunately django-webpush usually handles the UI if we use its tags,
+                          // but we are doing a custom UI.
+                          setTimeout(() => {
+                            registration.pushManager.getSubscription().then(sub => updateWebpushUI(!!sub));
+                          }, 2000);
+                      }
+                  }
+              });
+          });
+      };
+
+      if (webpushBtn) webpushBtn.addEventListener('click', subscribeAction);
+      if (webpushBtnMobile) webpushBtnMobile.addEventListener('click', subscribeAction);
+    </script>
+    {% endif %}
 </body>
 </html>

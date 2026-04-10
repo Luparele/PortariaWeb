@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -24,8 +25,9 @@ from .models import (
     Checklist, Profile, AlertEmail, Condutor, Veiculo, 
     MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, 
     MaintenanceSchedule, AlertTelegram, MaintenanceStatusLog, 
-    EmailConfig, TelegramConfig, ChecklistPhoto
+    EmailConfig, TelegramConfig, ChecklistPhoto, TelegramToken
 )
+from webpush import send_group_notification, send_user_notification
 from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS, PORTARIA_ITEMS, FORKLIFT_ITEMS
 
 # --- HELPER FUNCTIONS ---
@@ -269,6 +271,126 @@ def _send_schedule_alerts(schedule, request=None):
     
     _send_telegram_message(msg)
 
+def _send_push_to_roles(roles, title, message, url='/'):
+    """Sends a push notification to all users with specific roles"""
+    from django.contrib.auth.models import User
+    users = User.objects.filter(profile__role__in=roles)
+    payload = {
+        "title": title,
+        "body": message,
+        "url": url,
+        "icon": "/static/img/pwa-icon.png"
+    }
+    for user in users:
+        try:
+            send_user_notification(user=user, payload=payload, ttl=1000)
+        except Exception as e:
+            print(f"Erro ao enviar push para {user.username}: {e}")
+
+def _notify_new_checklist_push(checklist, type_label):
+    """Notify managers about a new checklist via PWA Push"""
+    roles_to_notify = ['GESTOR', 'ADMIN', 'SUPERUSER']
+    title = f"Novo Checklist: {type_label}"
+    
+    # Resolve vehicle and user
+    veiculo_placa = "S/N"
+    if hasattr(checklist, 'placa_cavalo') and checklist.placa_cavalo:
+        veiculo_placa = checklist.placa_cavalo.placa
+    elif hasattr(checklist, 'veiculo') and checklist.veiculo:
+        veiculo_placa = checklist.veiculo.placa
+        
+    usuario_nome = "Sistema"
+    if hasattr(checklist, 'porteiro') and checklist.porteiro:
+        usuario_nome = checklist.porteiro.username
+    elif hasattr(checklist, 'responsavel') and checklist.responsavel:
+        usuario_nome = checklist.responsavel.username
+
+    message = f"Veículo {veiculo_placa} registrado por {usuario_nome}."
+    
+    url = "/"
+    if type_label == "Portaria":
+        url = f"/portaria/{checklist.id}/"
+    elif type_label == "Caminhão":
+        url = f"/manutencao/truck/{checklist.id}/"
+    elif type_label == "Carreta":
+        url = f"/manutencao/trailer/{checklist.id}/"
+    elif type_label == "Empilhadeira":
+        url = f"/forklift/{checklist.id}/"
+
+    from django.contrib.auth.models import User
+    _send_push_to_roles(roles_to_notify, title, message, url)
+
+@login_required
+def generate_telegram_token(request):
+    """Gera um token UUID para deep linking com o Telegram e redireciona o usuário."""
+    # Remover tokens antigos do usuário para evitar lixo
+    TelegramToken.objects.filter(user=request.user).delete()
+    
+    # Criar novo token
+    token_obj = TelegramToken.objects.create(user=request.user)
+    
+    # Obter link do bot do banco de dados
+    config = TelegramConfig.objects.first()
+    bot_link = config.bot_link if config and config.bot_link else "https://t.me/PortariaWeb_bot"
+    
+    # Adicionar o parâmetro start=TOKEN (sem espaços)
+    redirect_url = f"{bot_link}?start={token_obj.token}"
+    
+    return redirect(redirect_url)
+
+@csrf_exempt
+def telegram_webhook(request):
+    """Recebe mensagens do Telegram e processa o comando /start <token>."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'invalid method'}, status=405)
+        
+    try:
+        data = json.loads(request.body)
+        message = data.get('message', {})
+        text = message.get('text', '')
+        chat_id = message.get('chat', {}).get('id')
+        
+        # O Deep Linking do Telegram envia "/start TOKEN"
+        if text.startswith('/start ') and chat_id:
+            token_str = text.split(' ')[1]
+            try:
+                # Buscar o token no banco
+                token_obj = TelegramToken.objects.get(token=token_str, used=False)
+                
+                # Validar expiração (10 minutos)
+                if not token_obj.is_expired():
+                    # Vincular ao perfil do usuário
+                    profile = token_obj.user.profile
+                    profile.telegram_chat_id = str(chat_id)
+                    profile.save()
+                    
+                    # Marcar token como usado
+                    token_obj.used = True
+                    token_obj.save()
+                    
+                    # Enviar mensagem de confirmação
+                    confirmation_text = (
+                        "🚀 <b>Vinculação Concluída!</b>\n\n"
+                        f"Olá {token_obj.user.first_name or token_obj.user.username}, seu perfil foi vinculado com sucesso.\n"
+                        "A partir de agora, você receberá alertas críticos diretamente aqui."
+                    )
+                    _send_single_telegram_message(chat_id, confirmation_text)
+                    
+                    return JsonResponse({'status': 'linked success'})
+                else:
+                    _send_single_telegram_message(chat_id, "⚠️ O token de ativação expirou. Por favor, gere um novo no site.")
+                    return JsonResponse({'status': 'token expired'})
+                    
+            except (TelegramToken.DoesNotExist, ValueError):
+                _send_single_telegram_message(chat_id, "❌ Token inválido ou já utilizado.")
+                return JsonResponse({'status': 'invalid token'})
+                
+        return JsonResponse({'status': 'ignored'})
+        
+    except Exception as e:
+        print(f"Erro no Webhook Telegram: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 # --- DASHBOARD SERIALIZATION HELPERS ---
 
 def _serialize_checklist(obj):
@@ -276,7 +398,6 @@ def _serialize_checklist(obj):
         'id': obj.id,
         'data_criacao': obj.data_criacao,
         'anomalias': obj.anomalias,
-        'tipo_equipamento': obj.tipo_equipamento,
         'porteiro_name': obj.porteiro.get_full_name() or obj.porteiro.username if obj.porteiro else 'S/N',
         'placa_cavalo_detail': {'placa': obj.placa_cavalo.placa} if obj.placa_cavalo else None,
         'nome_motorista_detail': {'nome': obj.nome_motorista.nome} if obj.nome_motorista else None,
@@ -320,6 +441,9 @@ def _serialize_forklift(obj):
 
 @login_required
 def dashboard_view(request):
+    if request.user.profile.role not in ['MANUTENCAO', 'GESTOR', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito aos Relatórios.")
+        return redirect('home')
     # Fetch all data
     portaria_qs = Checklist.objects.select_related('placa_cavalo', 'nome_motorista', 'porteiro').order_by('-data_criacao')
     truck_qs = MaintenanceTruck.objects.select_related('veiculo', 'motorista', 'responsavel').order_by('-data_criacao')
@@ -352,11 +476,11 @@ def dashboard_view(request):
     }
     return render(request, 'dashboard.html', context)
 
-from django.shortcuts import redirect
-from django.contrib import messages
-
 @login_required
 def portaria_create_view(request):
+    if request.user.profile.role not in ['CONTROLADOR', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito ao Checklist de Portaria.")
+        return redirect('home')
     if request.method == 'POST':
         try:
             # Capturar IDs numéricos
@@ -379,7 +503,6 @@ def portaria_create_view(request):
                 placa_carreta_01=placa_carreta_01,
                 placa_carreta_02=placa_carreta_02,
                 doc_carreta_entregue=request.POST.get('doc_carreta_entregue') == 'on',
-                tipo_equipamento=request.POST.get('tipo_equipamento', 'PRANCHA'),
                 
                 # Eletrica
                 eletrica_condicoes=request.POST.get('eletrica_condicoes', 'NA'),
@@ -421,6 +544,9 @@ def portaria_create_view(request):
             if checklist.anomalias and checklist.anomalias.strip():
                 _send_portaria_anomaly_email(checklist, request)
             
+            # Notificação PWA Push
+            _notify_new_checklist_push(checklist, "Portaria")
+            
             messages.success(request, 'Checklist da Portaria salvo com sucesso!')
             return redirect('dashboard')
             
@@ -446,6 +572,9 @@ from .models import MaintenanceTruck, MaintenanceTrailer
 
 @login_required
 def maintenance_create_view(request, m_type):
+    if request.user.profile.role not in ['MANUTENCAO', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito à Manutenção.")
+        return redirect('home')
     # m_type: 'truck' or 'trailer'
     is_truck = (m_type == 'truck')
     items = TRUCK_MAINTENANCE_ITEMS if is_truck else TRAILER_MAINTENANCE_ITEMS
@@ -487,6 +616,10 @@ def maintenance_create_view(request, m_type):
                 alert_type = "CAMINHÃO" if is_truck else "CARRETA/BUG"
                 _send_maintenance_alert(instance, alert_type, request)
 
+            # Notificação PWA Push
+            notification_type = "Caminhão" if is_truck else "Carreta"
+            _notify_new_checklist_push(instance, notification_type)
+
             messages.success(request, f'Manutenção de {tipo_veiculo} salva com sucesso!')
             return redirect('dashboard')
             
@@ -526,6 +659,9 @@ def maintenance_detail_view(request, m_type, pk):
 
 @login_required
 def forklift_create_view(request):
+    if request.user.profile.role not in ['DEPOT', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito ao Checklist de Empilhadeira.")
+        return redirect('home')
     items = FORKLIFT_ITEMS
     
     if request.method == 'POST':
@@ -559,6 +695,9 @@ def forklift_create_view(request):
             
             if has_nc or (instance.observacoes and instance.observacoes.strip()):
                 _send_forklift_anomaly_email(instance, request)
+            
+            # Notificação PWA Push
+            _notify_new_checklist_push(instance, "Empilhadeira")
                 
             messages.success(request, 'Checklist de Empilhadeira salvo com sucesso!')
             return redirect('dashboard')
@@ -588,6 +727,9 @@ def forklift_detail_view(request, pk):
 
 @login_required
 def condutor_list_view(request):
+    if request.user.profile.role not in ['ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito à gestão de Motoristas.")
+        return redirect('home')
     if request.method == 'POST':
         # Handles creation and deletion
         action = request.POST.get('action')
@@ -615,6 +757,9 @@ def condutor_list_view(request):
 
 @login_required
 def veiculo_list_view(request):
+    if request.user.profile.role not in ['ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito à gestão de Veículos.")
+        return redirect('home')
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'create':
@@ -622,7 +767,10 @@ def veiculo_list_view(request):
                 Veiculo.objects.create(
                     placa=request.POST.get('placa', '').upper(),
                     tipo=request.POST.get('tipo', 'CAVALO'),
-                    modelo=request.POST.get('modelo', '').upper()
+                    marca_modelo=request.POST.get('marca_modelo', '').upper(),
+                    ano=request.POST.get('ano', ''),
+                    renavam=request.POST.get('renavam', ''),
+                    categoria=request.POST.get('categoria') if request.POST.get('tipo') == 'CARRETA' else None
                 )
                 messages.success(request, 'Veículo cadastrado com sucesso!')
             except Exception as e:
@@ -717,12 +865,24 @@ def system_admin_view(request):
                     counter += 1
                 
                 try:
+                    # Security check for SUPERUSER role
+                    is_su = False
+                    if role == 'SUPERUSER':
+                        if request.user.is_superuser:
+                            is_su = True
+                        else:
+                            # Fallback if a non-superuser tries to force this role
+                            messages.warning(request, "Atenção: Apenas Superusuários podem criar outros Superusuários. Perfil alterado para ADMINISTRADOR.")
+                            role = 'ADMIN'
+
                     # Create user
                     new_user = User.objects.create_user(
                         username=username,
                         password=password,
                         first_name=first_name,
                         last_name=last_name,
+                        is_superuser=is_su,
+                        is_staff=is_su,
                         email=f"{username.lower()}@intalog.com.br"
                     )
                     # Update profile (created by signals)
@@ -822,8 +982,8 @@ def system_admin_view(request):
 @login_required
 def agenda_manutencao_view(request):
     """View to display the maintenance agenda with filtering"""
-    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
-        messages.error(request, "Acesso restrito para Gestão e Manutenção.")
+    if request.user.profile.role not in ['MANUTENCAO', 'GESTOR', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito à Agenda de Manutenção.")
         return redirect('home')
     query = request.GET.get('q', '')
     filter_date = request.GET.get('date', '')
@@ -893,9 +1053,9 @@ def agenda_manutencao_view(request):
 @login_required
 def schedule_create_view(request):
     """AJAX/POST view to create a new maintenance schedule"""
-    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
-        messages.error(request, "Permissão negada.")
-        return redirect('home')
+    if request.user.profile.role not in ['MANUTENCAO', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito à criação de agendamentos.")
+        return redirect('agenda_manutencao')
     if request.method == 'POST':
         try:
             veiculo_id = request.POST.get('veiculo')
@@ -945,8 +1105,8 @@ def schedule_create_view(request):
 @login_required
 def schedule_delete_view(request, pk):
     """Delete a maintenance schedule"""
-    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
-        messages.error(request, "Permissão negada.")
+    if request.user.profile.role not in ['MANUTENCAO', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito à exclusão de agendamentos.")
         return redirect('agenda_manutencao')
         
     schedule = get_object_or_404(MaintenanceSchedule, pk=pk)
@@ -1006,8 +1166,8 @@ def _send_status_update_alerts(schedule, request):
 @login_required
 def schedule_update_status_view(request, pk):
     """Update status of a maintenance schedule"""
-    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
-        messages.error(request, "Permissão negada.")
+    if request.user.profile.role not in ['MANUTENCAO', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito à alteração de status.")
         return redirect('agenda_manutencao')
 
     schedule = get_object_or_404(MaintenanceSchedule, pk=pk)
@@ -1047,9 +1207,9 @@ def schedule_update_status_view(request, pk):
 
 @login_required
 def resolve_checklist_view(request, checklist_type, pk):
-    # Only ADMIN, GESTOR, MANUTENCAO can resolve
-    if not request.user.profile.role in ['ADMIN', 'GESTOR', 'MANUTENCAO']:
-        messages.error(request, 'Você não tem permissão para sinalizar como resolvido.')
+    # Only MANUTENCAO can resolve
+    if request.user.profile.role not in ['MANUTENCAO', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, 'Você não tem permissão para sinalizar como resolvido (Acesso restrito à Manutenção).')
         return redirect('dashboard')
 
     if request.method == 'POST':

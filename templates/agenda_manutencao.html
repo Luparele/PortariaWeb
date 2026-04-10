@@ -68,11 +68,13 @@
                 {% endif %}
             </form>
             
+            {% if request.user.profile.role in 'MANUTENCAO,ADMIN,SUPERUSER' %}
             <button onclick="document.getElementById('modal-novo-agendamento').classList.remove('hidden')" 
                     class="py-3 px-6 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
                 Novo Agendamento
             </button>
+            {% endif %}
         </div>
     </div>
 
@@ -157,7 +159,7 @@
                                     </div>
                                 </div>
 
-                                {% if user.profile.role in 'ADMIN,GESTOR,MANUTENCAO' %}
+                                {% if request.user.profile.role in 'MANUTENCAO,ADMIN,SUPERUSER' %}
                                 <div class="pt-4 border-t border-slate-50 flex gap-2">
                                     <form action="{% url 'schedule_status' s.id %}" method="POST" class="flex-1">
                                         {% csrf_token %}

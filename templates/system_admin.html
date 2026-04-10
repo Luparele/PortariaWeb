@@ -534,8 +534,12 @@
                                 <select name="role" class="w-full bg-slate-50 border-0 rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-indigo-500 font-bold text-sm h-[56px] outline-none transition-all cursor-pointer">
                                     <option value="CONTROLADOR">CONTROLE DE ACESSO</option>
                                     <option value="MANUTENCAO">MANUTENÇÃO</option>
+                                    <option value="DEPOT">DEPOT (EMPILHADEIRAS)</option>
                                     <option value="GESTOR">GESTOR</option>
                                     <option value="ADMIN">ADMINISTRADOR</option>
+                                    {% if request.user.is_superuser %}
+                                    <option value="SUPERUSER">SUPERUSUÁRIO (ACESSO TOTAL)</option>
+                                    {% endif %}
                                 </select>
                             </div>
                         </div>

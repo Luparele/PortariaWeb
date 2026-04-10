@@ -60,7 +60,7 @@
             <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar ao Painel
         </a>
         <div class="flex items-center gap-3">
-            {% if checklist.has_nc and not checklist.is_resolved and request.user.profile.role in 'ADMIN,GESTOR,MANUTENCAO' %}
+            {% if checklist.has_nc and not checklist.is_resolved and request.user.profile.role in 'MANUTENCAO,ADMIN,SUPERUSER' %}
             <form action="{% url 'resolve_checklist' 'portaria' checklist.id %}" method="POST" id="resolveForm">
                 {% csrf_token %}
                 <button type="button" onclick="confirmResolution()" class="flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-xl hover:bg-amber-600 transition-all font-bold text-sm uppercase tracking-tight shadow-lg shadow-amber-500/20 border border-amber-600">
@@ -142,32 +142,51 @@
         </div>
         {% endif %}
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="mb-6">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 DetailSection">
                 <div class="bg-slate-50 px-6 py-3 border-b border-slate-100">
                     <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Identificação do Veículo e Motorista</h3>
                 </div>
                 <div class="p-6">
-                    <div class="grid grid-cols-2 gap-y-6 gap-x-4">
-                        {% include 'partials/info_item.html' with label='Placa Cavalo' value=checklist.placa_cavalo.placa icon='truck' %}
-                        {% include 'partials/info_item.html' with label='Motorista' value=checklist.nome_motorista.nome icon='user' %}
-                        {% include 'partials/info_item.html' with label='Placa Carreta 01' value=checklist.placa_carreta_01.placa|default:"-" %}
-                        {% include 'partials/info_item.html' with label='Placa Carreta 02' value=checklist.placa_carreta_02.placa|default:"-" %}
-                        {% include 'partials/info_item.html' with label='Tipo Equip.' value=checklist.tipo_equipamento %}
-                        {% include 'partials/info_item.html' with label='Doc. Carreta' value=checklist.doc_carreta_entregue|yesno:"ENTREGUE,NÃO ENTREGUE" %}
+                    <!-- Cavalo -->
+                    <div class="mb-4 pb-4 border-b border-slate-50">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {% include 'partials/info_item.html' with label='Placa Cavalo' value=checklist.placa_cavalo.placa icon='truck' %}
+                            {% include 'partials/info_item.html' with label='Marca/Modelo' value=checklist.placa_cavalo.marca_modelo %}
+                            {% include 'partials/info_item.html' with label='Ano' value=checklist.placa_cavalo.ano %}
+                            {% include 'partials/info_item.html' with label='RENAVAN' value=checklist.placa_cavalo.renavam %}
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 DetailSection h-full">
-                <div class="bg-slate-50 px-6 py-3 border-b border-slate-100">
-                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Anomalias e Observações</h3>
-                </div>
-                <div class="p-6 h-full">
-                    <div class="bg-slate-50 p-4 rounded-xl h-full border border-slate-100 min-h-[120px]">
-                        <p class="text-sm text-slate-700 whitespace-pre-wrap italic font-medium leading-relaxed">
-                            {{ checklist.anomalias|default:"Nenhuma observação ou anomalia registrada para este veículo." }}
-                        </p>
+                    <!-- Carreta 1 -->
+                    <div class="mb-4 pb-4 border-b border-slate-50">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            {% include 'partials/info_item.html' with label='Placa Carreta 01' value=checklist.placa_carreta_01.placa|default:"-" icon='trailer' %}
+                            {% if checklist.placa_carreta_01 %}
+                                {% include 'partials/info_item.html' with label='Marca/Modelo' value=checklist.placa_carreta_01.marca_modelo %}
+                                {% include 'partials/info_item.html' with label='Categoria' value=checklist.placa_carreta_01.get_categoria_display %}
+                                {% include 'partials/info_item.html' with label='Ano' value=checklist.placa_carreta_01.ano %}
+                                {% include 'partials/info_item.html' with label='RENAVAN' value=checklist.placa_carreta_01.renavam %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Carreta 2 (Opcional) -->
+                    {% if checklist.placa_carreta_02 %}
+                    <div class="mb-4 pb-4 border-b border-slate-50">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            {% include 'partials/info_item.html' with label='Placa Carreta 02' value=checklist.placa_carreta_02.placa icon='trailer' %}
+                            {% include 'partials/info_item.html' with label='Marca/Modelo' value=checklist.placa_carreta_02.marca_modelo %}
+                            {% include 'partials/info_item.html' with label='Categoria' value=checklist.placa_carreta_02.get_categoria_display %}
+                            {% include 'partials/info_item.html' with label='Ano' value=checklist.placa_carreta_02.ano %}
+                            {% include 'partials/info_item.html' with label='RENAVAN' value=checklist.placa_carreta_02.renavam %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-2 gap-y-6 gap-x-4">
+                        {% include 'partials/info_item.html' with label='Motorista' value=checklist.nome_motorista.nome icon='user' %}
+                        {% include 'partials/info_item.html' with label='Doc. Carreta' value=checklist.doc_carreta_entregue|yesno:"ENTREGUE,NÃO ENTREGUE" %}
                     </div>
                 </div>
             </div>
@@ -205,6 +224,20 @@
                     {% include 'partials/check_item.html' with label='Step/Reserva' value=checklist.rodas_pneus_reserva %}
                     {% include 'partials/check_item.html' with label='Estado Geral' value=checklist.rodas_pneus_estado %}
                     {% include 'partials/check_item.html' with label='Cortes/Bolhas' value=checklist.rodas_pneus_cortes_bolhas %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Anomalias e Observações (Movido para antes das assinaturas) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-10 DetailSection">
+            <div class="bg-slate-50 px-6 py-3 border-b border-slate-100">
+                <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Anomalias e Observações</h3>
+            </div>
+            <div class="p-6">
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100 min-h-[100px] shadow-inner">
+                    <p class="text-sm text-slate-700 whitespace-pre-wrap italic font-medium leading-relaxed">
+                        {{ checklist.anomalias|default:"Nenhuma observação ou anomalia registrada para este checklist." }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -321,16 +354,44 @@
         </div>
         {% endif %}
 
-        <div class="grid grid-cols-2 gap-4 border-x-2 border-black px-4 py-2 bg-gray-100 border-y-2 mb-4">
-            <div class="space-y-1">
-                <p class="text-xs"><strong>PLACA CAVALO:</strong> {{ checklist.placa_cavalo.placa }}</p>
-                <p class="text-xs"><strong>MOTORISTA:</strong> {{ checklist.nome_motorista.nome }}</p>
-                <p class="text-xs"><strong>CPF:</strong> {{ checklist.nome_motorista.cpf }}</p>
+        <div class="border-2 border-black mb-4">
+            <!-- Cavalo -->
+            <div class="grid grid-cols-4 gap-2 px-4 py-2 border-b border-black bg-gray-100">
+                <div class="text-[9px]"><strong>PLACA CAVALO:</strong><br>{{ checklist.placa_cavalo.placa }}</div>
+                <div class="text-[9px]"><strong>MARCA/MODELO:</strong><br>{{ checklist.placa_cavalo.marca_modelo }}</div>
+                <div class="text-[9px]"><strong>ANO:</strong><br>{{ checklist.placa_cavalo.ano }}</div>
+                <div class="text-[9px]"><strong>RENAVAN:</strong><br>{{ checklist.placa_cavalo.renavam|default:"-" }}</div>
             </div>
-            <div class="space-y-1">
-                <p class="text-xs"><strong>CARRETAS:</strong> {{ checklist.placa_carreta_01.placa|default:"-" }} / {{ checklist.placa_carreta_02.placa|default:"-" }}</p>
-                <p class="text-xs"><strong>TIPO:</strong> {{ checklist.tipo_equipamento }}</p>
-                <p class="text-xs"><strong>DOC CARRETA:</strong> {{ checklist.doc_carreta_entregue|yesno:"SIM,NÃO" }}</p>
+            
+            <!-- Motorista -->
+            <div class="grid grid-cols-2 gap-4 px-4 py-1 border-b border-black">
+                <div class="text-[9px]"><strong>MOTORISTA:</strong> {{ checklist.nome_motorista.nome }}</div>
+                <div class="text-[9px]"><strong>CPF:</strong> {{ checklist.nome_motorista.cpf }}</div>
+            </div>
+
+            <!-- Carretas -->
+            <div class="grid grid-cols-5 gap-2 px-4 py-2 bg-gray-50 border-b border-black">
+                <div class="text-[9px]"><strong>PLACA CARRETA 01:</strong><br>{{ checklist.placa_carreta_01.placa|default:"-" }}</div>
+                {% if checklist.placa_carreta_01 %}
+                <div class="text-[9px]"><strong>MARCA/MODELO:</strong><br>{{ checklist.placa_carreta_01.marca_modelo }}</div>
+                <div class="text-[9px]"><strong>CATEGORIA:</strong><br>{{ checklist.placa_carreta_01.get_categoria_display }}</div>
+                <div class="text-[9px]"><strong>ANO:</strong><br>{{ checklist.placa_carreta_01.ano }}</div>
+                <div class="text-[9px]"><strong>RENAVAN:</strong><br>{{ checklist.placa_carreta_01.renavam|default:"-" }}</div>
+                {% else %}<div class="col-span-4"></div>{% endif %}
+            </div>
+
+            {% if checklist.placa_carreta_02 %}
+            <div class="grid grid-cols-5 gap-2 px-4 py-2 bg-gray-50 border-b border-black">
+                <div class="text-[9px]"><strong>PLACA CARRETA 02:</strong><br>{{ checklist.placa_carreta_02.placa }}</div>
+                <div class="text-[9px]"><strong>MARCA/MODELO:</strong><br>{{ checklist.placa_carreta_02.marca_modelo }}</div>
+                <div class="text-[9px]"><strong>CATEGORIA:</strong><br>{{ checklist.placa_carreta_02.get_categoria_display }}</div>
+                <div class="text-[9px]"><strong>ANO:</strong><br>{{ checklist.placa_carreta_02.ano }}</div>
+                <div class="text-[9px]"><strong>RENAVAN:</strong><br>{{ checklist.placa_carreta_02.renavam|default:"-" }}</div>
+            </div>
+            {% endif %}
+
+            <div class="px-4 py-1 text-[9px]">
+                <strong>DOC. CARRETA:</strong> {{ checklist.doc_carreta_entregue|yesno:"ENTREGUE,NÃO ENTREGUE" }}
             </div>
         </div>
 

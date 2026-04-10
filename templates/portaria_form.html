@@ -129,17 +129,7 @@
             </div>
         </div>
     
-        <!-- TIPO EQUIPAMENTO -->
-        <div class="mb-8">
-            <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-l-4 border-blue-600 pl-3 bg-slate-50 py-3 rounded-r-xl italic">TIPO DE EQUIPAMENTO</h3>
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-                <input type="hidden" name="tipo_equipamento" id="tipo_equipamento" value="PRANCHA">
-                <button type="button" onclick="setEquip(this, 'PRANCHA')" class="btn-equip p-3 rounded-xl border text-sm font-semibold transition-all bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200">Prancha</button>
-                <button type="button" onclick="setEquip(this, 'TAMPA')" class="btn-equip p-3 rounded-xl border text-sm font-semibold transition-all bg-white border-slate-200 text-slate-500 hover:border-blue-300">Com Tampa</button>
-                <button type="button" onclick="setEquip(this, 'BUGRE_20')" class="btn-equip p-3 rounded-xl border text-sm font-semibold transition-all bg-white border-slate-200 text-slate-500 hover:border-blue-300">Bugre 20'</button>
-                <button type="button" onclick="setEquip(this, 'BITREM')" class="btn-equip p-3 rounded-xl border text-sm font-semibold transition-all bg-white border-slate-200 text-slate-500 hover:border-blue-300">Bitrem</button>
-            </div>
-        </div>
+
     
         <!-- ELÉTRICA -->
         <div class="mb-8">
@@ -457,15 +447,6 @@
         document.getElementById('displayTimer').innerText = 
             `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         document.getElementById('tempo_execucao_val').value = diff;
-    }
-
-    // Configura Equipamento visual
-    function setEquip(btn, val) {
-        document.getElementById('tipo_equipamento').value = val;
-        document.querySelectorAll('.btn-equip').forEach(b => {
-             b.className = "btn-equip p-3 rounded-xl border text-sm font-semibold transition-all bg-white border-slate-200 text-slate-500 hover:border-blue-300";
-        });
-        btn.className = "btn-equip p-3 rounded-xl border text-sm font-semibold transition-all bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200";
     }
 
     // Configura Radio Buttons visuais

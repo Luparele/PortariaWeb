@@ -48,7 +48,7 @@
             <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar ao Dashboard
         </a>
         <div class="flex items-center gap-3">
-            {% if checklist.has_nc and not checklist.is_resolved and request.user.profile.role in 'ADMIN,GESTOR,MANUTENCAO' %}
+            {% if checklist.has_nc and not checklist.is_resolved and request.user.profile.role in 'MANUTENCAO,ADMIN,SUPERUSER' %}
             <form action="{% url 'resolve_checklist' 'forklift' checklist.id %}" method="POST" id="resolveForm">
                 {% csrf_token %}
                 <button type="button" onclick="confirmResolution()" class="flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-xl hover:bg-amber-600 transition-all font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 border border-amber-600">
