@@ -24,11 +24,11 @@ from checklists.views import (
     maintenance_create_view, condutor_list_view, veiculo_list_view, 
     maintenance_detail_view, system_admin_view, forklift_create_view, forklift_detail_view,
     agenda_manutencao_view, schedule_create_view, schedule_update_status_view, resolve_checklist_view,
-    download_checklist_photos_zip, generate_telegram_token, telegram_webhook
+    download_checklist_photos_zip, generate_telegram_token, telegram_webhook, home_view
 )
 
 urlpatterns = [
-    path('', login_required(TemplateView.as_view(template_name='home.html')), name='home'),
+    path('', home_view, name='home'),
     path('dashboard/', dashboard_view, name='dashboard'),
     path('portaria/nova/', portaria_create_view, name='portaria_create'),
     path('portaria/<int:pk>/', portaria_detail_view, name='portaria_detail'),

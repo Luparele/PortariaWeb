@@ -150,29 +150,99 @@
         </div>
         {% endif %}
         
-        <!-- SECTION: TELEGRAM (Novo - Vínculo Automático) -->
+        <!-- SECTION: CENTRAL DE NOTIFICAÇÕES -->
         <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-sky-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
             <div class="relative p-6">
-                <div class="w-14 h-14 bg-sky-500 text-white rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
-                    <i data-lucide="send" class="w-7 h-7"></i>
+                <div class="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="bell" class="w-7 h-7"></i>
                 </div>
-                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Alertas Telegram</h3>
-                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Vincule seu perfil ao nosso bot para receber alertas críticos e atualizações em tempo real.</p>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Central de Notificações</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-6">Controle seus alertas críticos por Telegram e Notificações Push (PWA).</p>
                 
-                {% if request.user.profile.telegram_chat_id %}
-                    <div class="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-emerald-100 italic">
-                        <i data-lucide="check-circle" class="w-4 h-4"></i>
-                        Vínculo Ativo
+                <div class="space-y-3">
+                    <!-- Telegram Section -->
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="send" class="w-4 h-4 text-sky-500"></i>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-700">Telegram</span>
+                        </div>
+                        {% if request.user.profile.telegram_chat_id %}
+                            <span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter">Ativo</span>
+                        {% else %}
+                            <a href="{% url 'telegram_activate' %}" class="bg-sky-500 hover:bg-sky-600 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter transition-all">Vincular</a>
+                        {% endif %}
                     </div>
-                {% else %}
-                    <a href="{% url 'telegram_activate' %}" class="flex items-center justify-between bg-sky-500 hover:bg-sky-600 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-sky-200 transition-all">
-                        Ativar Alertas
-                        <i data-lucide="external-link" class="w-4 h-4"></i>
-                    </a>
-                {% endif %}
+
+                    <!-- Push PWA Section -->
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="bell-ring" class="w-4 h-4 text-orange-500"></i>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-700">Push PWA</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Subscribe Button (O Sininho) -->
+                            <button id="card-webpush-subscribe" class="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-orange-500 transition-all shadow-sm" title="Ativar/Desativar neste aparelho">
+                                <i data-lucide="bell-off" class="w-4 h-4"></i>
+                            </button>
+                            
+                            <!-- Test Button -->
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="test_push_single">
+                                <button type="submit" class="p-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all shadow-sm" title="Enviar teste para este aparelho">
+                                    <i data-lucide="play" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <script>
+            // Sync the card bell with the main webpush logic
+            document.addEventListener('DOMContentLoaded', () => {
+                const cardPushBtn = document.getElementById('card-webpush-subscribe');
+                
+                function updateCardUI(isSubscribed) {
+                    if (!cardPushBtn) return;
+                    const icon = cardPushBtn.querySelector('i');
+                    if (isSubscribed) {
+                        cardPushBtn.classList.replace('text-slate-400', 'text-orange-500');
+                        cardPushBtn.classList.add('bg-orange-50', 'border-orange-100');
+                        if (icon) icon.setAttribute('data-lucide', 'bell');
+                    } else {
+                        cardPushBtn.classList.replace('text-orange-500', 'text-slate-400');
+                        cardPushBtn.classList.remove('bg-orange-50', 'border-orange-100');
+                        if (icon) icon.setAttribute('data-lucide', 'bell-off');
+                    }
+                    lucide.createIcons();
+                }
+
+                // Initial check
+                if ('serviceWorker' in navigator && 'PushManager' in window) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.pushManager.getSubscription().then(sub => updateCardUI(!!sub));
+                    });
+                }
+
+                if (cardPushBtn) {
+                    cardPushBtn.addEventListener('click', () => {
+                        // Trigger the same action as the navbar buttons
+                        if (typeof subscribeAction === 'function') {
+                            subscribeAction();
+                            // Update after a short delay
+                            setTimeout(() => {
+                                navigator.serviceWorker.ready.then(reg => {
+                                    reg.pushManager.getSubscription().then(sub => updateCardUI(!!sub));
+                                });
+                            }, 2000);
+                        }
+                    });
+                }
+            });
+        </script>
 
         <!-- SECTION: ADMINISTRAÇÃO (Admin e Superuser) -->
         {% if request.user.profile.role in 'ADMIN,SUPERUSER' %}

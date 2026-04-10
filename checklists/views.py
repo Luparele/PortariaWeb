@@ -873,6 +873,29 @@ def veiculo_list_view(request):
     veiculos = Veiculo.objects.all().order_by('tipo', 'placa')
     return render(request, 'veiculo_list.html', {'veiculos': veiculos})
 
+@login_required
+def home_view(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'test_push_single':
+            payload = {
+                "head": "🚀 TESTE INTALOG PWA",
+                "body": f"Olá {request.user.first_name or request.user.username}, esta é uma notificação de teste enviada da sua Central de Notificações.",
+                "url": f"{request.scheme}://{request.get_host()}/"
+            }
+            try:
+                # Verify if user has webpush subscriptions
+                if not hasattr(request.user, 'webpush_info') or request.user.webpush_info.count() == 0:
+                    messages.error(request, 'Erro: Seu navegador ainda não está inscrito. Clique no ícone do sino para ativar.')
+                else:
+                    send_user_notification(user=request.user, payload=payload, ttl=1000)
+                    messages.success(request, 'Notificação Push enviada com sucesso para este aparelho!')
+            except Exception as e:
+                messages.error(request, f'Erro ao disparar PWA Push: {str(e)}')
+            return redirect('home')
+
+    return render(request, 'home.html')
+
 import unicodedata
 import re
 
