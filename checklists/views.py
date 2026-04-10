@@ -101,12 +101,15 @@ def _send_telegram_message(message, request=None):
         if request: messages.warning(request, "Token do Telegram vazio. Alerta não enviado.")
         return
 
+    from django.contrib.auth.models import User
     proxies = {"http": "http://proxy.server:3128", "https": "http://proxy.server:3128"} if os.environ.get('PYTHONANYWHERE_SITE') else None
-    contacts = AlertTelegram.objects.filter(ativo=True)
+    
+    contacts = User.objects.exclude(profile__telegram_chat_id__isnull=True).exclude(profile__telegram_chat_id__exact='')
+    
     for contact in contacts:
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {
-            'chat_id': contact.chat_id,
+            'chat_id': contact.profile.telegram_chat_id,
             'text': message,
             'parse_mode': 'HTML'
         }
@@ -119,11 +122,12 @@ def _send_telegram_message(message, request=None):
                 elif response.status_code in [502, 503, 504]:
                     time.sleep(1)
                 else:
-                    print(f"Erro Telegram ({contact.chat_id}): {response.status_code} - {response.text}")
+                    print(f"Erro Telegram ({contact.profile.telegram_chat_id}): {response.status_code} - {response.text}")
                     if request: messages.warning(request, f"Erro Telegram: Código {response.status_code}")
                     break
             except Exception as e:
-                print(f"Erro ao enviar para {contact.nome} (Tentativa {attempt+1}): {e}")
+                name = contact.get_full_name() or contact.username
+                print(f"Erro ao enviar para {name} (Tentativa {attempt+1}): {e}")
                 if attempt == 2 and request: messages.warning(request, f"Falha na rede ao conectar no Telegram (Possível bloqueio de Proxy/Firewall).")
                 time.sleep(1)
 
