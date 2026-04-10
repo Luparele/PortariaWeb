@@ -1051,6 +1051,27 @@ def system_admin_view(request):
                 user_to_unlink.profile.save()
                 messages.success(request, f'Vínculo do Telegram de {user_to_unlink.username} removido.')
 
+        elif action == 'test_push_single':
+            tester_user_id = request.POST.get('user_id')
+            target_user = get_object_or_404(User, id=tester_user_id)
+            
+            payload = {
+                "head": "🚀 TESTE INTALOG PWA",
+                "body": f"Olá {target_user.first_name or target_user.username}, esta é uma notificação de teste enviada do painel administrativo.",
+                "url": f"{request.scheme}://{request.get_host()}/"
+            }
+            
+            try:
+                from webpush import send_user_notification
+                # Verify if user has webpush subscriptions
+                if not hasattr(target_user, 'webpush_info') or target_user.webpush_info.count() == 0:
+                    messages.error(request, f'Erro: O usuário {target_user.username} ainda não ativou as notificações (clicou no Sininho).')
+                else:
+                    send_user_notification(user=target_user, payload=payload, ttl=1000)
+                    messages.success(request, f'Comando de Notificação Push enviado para {target_user.username} em todos os seus aparelhos vinculados!')
+            except Exception as e:
+                messages.error(request, f'Erro ao disparar PWA Push: {str(e)}')
+
         return redirect('system_admin')
 
     context = {
