@@ -415,6 +415,12 @@ def _send_schedule_alerts(schedule, request=None):
     msg += f"🔗 Agenda: {site_url}/manutencao/agenda/"
     
     _send_telegram_message(msg, request=request)
+    
+    # 3. PWA Push Notification
+    push_roles = ['GESTOR', 'ADMIN', 'SUPERUSER', 'MANUTENCAO']
+    push_title = f"🛠️ NOVO AGENDAMENTO: {schedule.veiculo.placa}"
+    push_body = f"Manutenção agendada para {schedule.data_paralizacao.strftime('%d/%m/%Y %H:%M')}."
+    _send_push_to_roles(push_roles, push_title, push_body, url='/manutencao/agenda/')
 
 def _send_push_to_roles(roles, title, message, url='/'):
     """Sends a push notification to all users with specific roles"""
