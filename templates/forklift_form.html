@@ -494,7 +494,14 @@
         }
     }
 
+    let isSubmitting = false;
     document.getElementById('forkliftForm').addEventListener('submit', function(e) {
+        if (isSubmitting) {
+            e.preventDefault();
+            alert("Aguarde o processamento... O checklist já está sendo salvo.");
+            return;
+        }
+
         let hasNao = false;
         document.querySelectorAll('input[type="hidden"]').forEach(inp => {
             if(inp.id.startsWith("hidden_") && inp.value === "NAO") {
@@ -524,6 +531,14 @@
         
         if (startTime) {
             document.getElementById('tempo_execucao_val').value = Math.floor((Date.now() - startTime) / 1000);
+        }
+        
+        isSubmitting = true;
+        const btn = this.querySelector('button[type="submit"]');
+        if (btn) {
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Processando...';
+            btn.classList.add('opacity-70', 'cursor-not-allowed', 'pointer-events-none');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     });
 
