@@ -21,7 +21,8 @@ admin.site.index_title = "Gestão Operacional"
 
 @admin.register(Condutor)
 class CondutorAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'cpf', 'data_nascimento')
+    list_display = ('nome', 'cpf', 'data_nascimento', 'ativo')
+    list_filter = ('ativo',)
     search_fields = ('nome', 'cpf')
 
 @admin.register(Veiculo)

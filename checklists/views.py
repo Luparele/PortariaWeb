@@ -719,7 +719,7 @@ def portaria_create_view(request):
             messages.error(request, f'Erro ao salvar: {str(e)}')
             
     context = {
-        'condutores': Condutor.objects.all().order_by('nome'),
+        'condutores': Condutor.objects.filter(ativo=True).order_by('nome'),
         'veiculos_cavalos': Veiculo.objects.filter(tipo='CAVALO').order_by('placa'),
         'veiculos_carretas': Veiculo.objects.filter(tipo='CARRETA').order_by('placa'),
     }
@@ -796,7 +796,7 @@ def maintenance_create_view(request, m_type):
         'm_type': m_type,
         'tipo_titulo': 'Caminhão/Cavalo' if is_truck else 'Carreta/Equipamento',
         'veiculos': Veiculo.objects.filter(tipo=tipo_veiculo).order_by('placa'),
-        'condutores': Condutor.objects.all().order_by('nome'),
+        'condutores': Condutor.objects.filter(ativo=True).order_by('nome'),
     }
     return render(request, 'maintenance_form.html', context)
 
@@ -871,7 +871,7 @@ def forklift_create_view(request):
             
     context = {
         'items': items,
-        'operadores': Condutor.objects.all().order_by('nome'),
+        'operadores': Condutor.objects.filter(ativo=True).order_by('nome'),
     }
     return render(request, 'forklift_form.html', context)
 
@@ -911,13 +911,15 @@ def condutor_list_view(request):
         elif action == 'delete':
             try:
                 c_id = request.POST.get('id')
-                Condutor.objects.filter(id=c_id).delete()
-                messages.success(request, 'Motorista excluído com sucesso!')
+                condutor = Condutor.objects.get(id=c_id)
+                condutor.ativo = False
+                condutor.save()
+                messages.success(request, 'Motorista arquivado com sucesso (remoção silenciosa).')
             except Exception as e:
-                messages.error(request, 'Erro ao excluir motorista (possui vinculos).')
+                messages.error(request, 'Erro ao arquivar motorista.')
         return redirect('condutor_list')
         
-    condutores = Condutor.objects.all().order_by('nome')
+    condutores = Condutor.objects.filter(ativo=True).order_by('nome')
     return render(request, 'condutor_list.html', {'condutores': condutores})
 
 @login_required

@@ -26,6 +26,7 @@ class Condutor(models.Model):
     nome = models.CharField(max_length=100)
     cpf = models.CharField(max_length=14, unique=True)
     data_nascimento = models.DateField(blank=True, null=True)
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
 
     class Meta:
         verbose_name = "Motorista/Condutor"
