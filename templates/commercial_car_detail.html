@@ -130,9 +130,8 @@
                 </div>
                 <div class="p-6">
                     <div class="grid grid-cols-1 gap-y-4">
-                        <div class="grid grid-cols-2 gap-4 border-b border-slate-50 pb-4">
-                            {% include 'partials/info_item.html' with label='Placa' value=checklist.veiculo.placa icon='car' %}
-                            {% include 'partials/info_item.html' with label='Marca / Modelo' value=checklist.veiculo.marca_modelo|default:"-" %}
+                        <div class="grid grid-cols-1 gap-4 border-b border-slate-50 pb-4">
+                            {% include 'partials/info_item.html' with label='Veículo' value=checklist.veiculo.marca_modelo|default:checklist.veiculo.placa icon='car' %}
                         </div>
                         <div class="grid grid-cols-1 gap-4 border-b border-slate-50 pb-4">
                             <div>
@@ -293,8 +292,7 @@
 
         <div class="grid grid-cols-2 gap-4 border-x-2 border-black px-4 py-2 bg-gray-100 border-y-2 mb-4">
             <div class="space-y-1">
-                <p class="text-xs"><strong>VEÍCULO/PLACA:</strong> {{ checklist.veiculo.placa }}</p>
-                <p class="text-xs"><strong>MODELO:</strong> {{ checklist.veiculo.modelo|default:"-" }}</p>
+                <p class="text-xs"><strong>VEÍCULO:</strong> {{ checklist.veiculo.marca_modelo|default:checklist.veiculo.placa }}</p>
                 <p class="text-xs"><strong>NOME CONDUTOR:</strong> {{ checklist.nome_condutor }}</p>
             </div>
             <div class="text-right space-y-1">
@@ -310,17 +308,30 @@
         </div>
 
         <div class="grid grid-cols-2 gap-x-6 gap-y-0 text-[10px] uppercase border-2 border-black p-4">
-            {% for item in checklist.get_items %}
+            {% for item in items %}
             <div class="flex justify-between border-b border-gray-200 py-1">
                 <span class="font-bold underline">{{ forloop.counter }}. {{ item.label }}:</span>
                 <span class="font-black">
-                    {% if item.value == 'SIM' %}[X] CONFORME{% elif item.value == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}
+                    {% if item.status == 'SIM' %}[X] CONFORME{% elif item.status == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}
                 </span>
             </div>
             {% endfor %}
         </div>
 
-        <div class="grid grid-cols-2 gap-12 mt-12 px-8">
+        </div>
+
+        {% if checklist.photos %}
+        <div class="border-2 border-black p-4 mb-4 mt-4 page-break-inside-avoid">
+            <p class="text-xs font-bold mb-2 underline">RELATÓRIO FOTOGRÁFICO:</p>
+            <div class="grid grid-cols-3 gap-2">
+                {% for photo in checklist.photos %}
+                <img src="{{ photo.file.url }}" alt="Foto" class="w-full h-auto border border-black" style="max-height: 250px; object-fit: contain;" />
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-2 gap-12 mt-12 px-8 page-break-inside-avoid">
             <div class="text-center">
                 {% if checklist.visto_responsavel %}
                 <img src="{{ checklist.visto_responsavel }}" alt="Assinatura" class="max-h-12 mx-auto mb-1" />
