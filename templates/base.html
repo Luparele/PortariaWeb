@@ -84,6 +84,9 @@
                             <a href="{% url 'forklift_create' %}" class="flex items-center gap-3 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-indigo-600">
                                 <i data-lucide="forklift" class="w-4 h-4"></i> Empilhadeira
                             </a>
+                            <a href="{% url 'commercial_car_create' %}" class="flex items-center gap-3 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-teal-600">
+                                <i data-lucide="car" class="w-4 h-4"></i> Carro Comercial
+                            </a>
                         </div>
                     </div>
 
@@ -234,6 +237,13 @@
                 Empilhadeira
                 <div class="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
                     <i data-lucide="forklift" class="w-4 h-4 text-indigo-500"></i>
+                </div>
+            </a>
+
+            <a href="{% url 'commercial_car_create' %}" class="flex items-center justify-end gap-3 bg-white pl-4 pr-3 py-2.5 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-teal-600 w-full text-right transition-all active:scale-95">
+                Carro Comercial
+                <div class="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center shrink-0">
+                    <i data-lucide="car" class="w-4 h-4 text-teal-500"></i>
                 </div>
             </a>
 
