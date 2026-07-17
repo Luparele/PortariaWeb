@@ -103,10 +103,14 @@
                 </div>
                 <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Carro Comercial</h3>
                 <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Inspeção detalhada da frota de carros comerciais, combustível e estrutura.</p>
-                <a href="{% url 'commercial_car_create' %}" class="flex items-center justify-between bg-amber-500 hover:bg-amber-600 text-slate-900 p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-amber-200 transition-all">
-                    Iniciar agora
-                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </a>
+                <div class="flex gap-2">
+                    <a href="{% url 'commercial_car_create' %}" class="flex-1 flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-slate-900 p-4 rounded-2xl font-black uppercase tracking-widest text-[9px] shadow-lg shadow-amber-200 transition-all text-center">
+                        Iniciar agora
+                    </a>
+                    <a href="{% url 'commercial_car_list' %}" class="flex-1 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 p-4 rounded-2xl font-black uppercase tracking-widest text-[9px] shadow-lg shadow-slate-200 transition-all text-center">
+                        Histórico
+                    </a>
+                </div>
             </div>
         </div>
         {% endif %}

@@ -1625,3 +1625,8 @@ def commercial_car_create_view(request):
 def commercial_car_detail_view(request, pk):
     checklist = get_object_or_404(ChecklistCarroComercial, pk=pk)
     return render(request, 'commercial_car_detail.html', {'checklist': checklist})
+
+@login_required
+def commercial_car_list_view(request):
+    checklists = ChecklistCarroComercial.objects.all().order_by('-data_criacao')
+    return render(request, 'commercial_car_list.html', {'object_list': checklists})
