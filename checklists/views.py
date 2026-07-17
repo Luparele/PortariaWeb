@@ -1624,7 +1624,21 @@ def commercial_car_create_view(request):
 @login_required
 def commercial_car_detail_view(request, pk):
     checklist = get_object_or_404(ChecklistCarroComercial, pk=pk)
-    return render(request, 'commercial_car_detail.html', {'checklist': checklist})
+    from .constants import COMMERCIAL_CAR_ITEMS
+    
+    # Adicionar o status de cada item ao dicionário
+    items_with_status = []
+    for item in COMMERCIAL_CAR_ITEMS:
+        items_with_status.append({
+            'label': item['label'],
+            'status': getattr(checklist, item['id'], 'NA')
+        })
+        
+    context = {
+        'checklist': checklist,
+        'items': items_with_status
+    }
+    return render(request, 'commercial_car_detail.html', context)
 
 @login_required
 def commercial_car_list_view(request):

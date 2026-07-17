@@ -58,8 +58,8 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-xs font-bold text-slate-700 uppercase item-driver">{{ checklist.condutor_nome }}</td>
-                        <td class="px-6 py-4 text-xs font-mono text-slate-500 text-center">{{ checklist.km_atual }}</td>
+                        <td class="px-6 py-4 text-xs font-bold text-slate-700 uppercase item-driver">{{ checklist.nome_condutor }}</td>
+                        <td class="px-6 py-4 text-xs font-mono text-slate-500 text-center">{{ checklist.quilometragem|default:"-" }}</td>
                         <td class="px-6 py-4 text-center">
                             <div class="flex justify-center gap-0.5">
                                 {% for i in "12345678"|make_list %}
