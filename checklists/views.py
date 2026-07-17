@@ -27,10 +27,11 @@ from .models import (
     Checklist, Profile, AlertEmail, Condutor, Veiculo, 
     MaintenanceTruck, MaintenanceTrailer, ChecklistForklift, 
     MaintenanceSchedule, AlertTelegram, MaintenanceStatusLog, 
-    EmailConfig, TelegramConfig, ChecklistPhoto, TelegramToken
+    EmailConfig, TelegramConfig, ChecklistPhoto, TelegramToken,
+    ChecklistCarroComercial
 )
 from webpush import send_group_notification, send_user_notification
-from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS, PORTARIA_ITEMS, FORKLIFT_ITEMS
+from .constants import TRUCK_MAINTENANCE_ITEMS, TRAILER_MAINTENANCE_ITEMS, PORTARIA_ITEMS, FORKLIFT_ITEMS, COMMERCIAL_CAR_ITEMS
 
 # --- HELPER FUNCTIONS ---
 
@@ -604,6 +605,21 @@ def _serialize_forklift(obj):
         data[item['id']] = getattr(obj, item['id'], 'NA')
     return data
 
+def _serialize_commercial_car(obj):
+    data = {
+        'id': obj.id,
+        'data_criacao': obj.data_criacao,
+        'observacoes': obj.observacoes,
+        'veiculo_detail': {'placa': obj.veiculo.placa} if obj.veiculo else None,
+        'nome_condutor': obj.nome_condutor,
+        'responsavel_name': obj.responsavel.get_full_name() or obj.responsavel.username if obj.responsavel else 'S/N',
+        'has_nc': obj.has_nc,
+        'is_resolved': obj.is_resolved,
+    }
+    for item in COMMERCIAL_CAR_ITEMS:
+        data[item['id']] = getattr(obj, item['id'], 'NA')
+    return data
+
 @login_required
 def dashboard_view(request):
     if request.user.profile.role not in ['MANUTENCAO', 'GESTOR', 'ADMIN', 'SUPERUSER']:
@@ -614,29 +630,34 @@ def dashboard_view(request):
     truck_qs = MaintenanceTruck.objects.select_related('veiculo', 'motorista', 'responsavel').order_by('-data_criacao')
     trailer_qs = MaintenanceTrailer.objects.select_related('veiculo', 'motorista', 'responsavel').order_by('-data_criacao')
     forklift_qs = ChecklistForklift.objects.select_related('operador', 'responsavel').order_by('-data_criacao')
+    commercial_qs = ChecklistCarroComercial.objects.select_related('veiculo', 'responsavel').order_by('-data_criacao')
     
     # Manual serialization for JSON consumption in dashboard.html
     portaria_data = [_serialize_checklist(c) for c in portaria_qs]
     truck_data = [_serialize_maintenance(t, True) for t in truck_qs]
     trailer_data = [_serialize_maintenance(t, False) for t in trailer_qs]
     forklift_data = [_serialize_forklift(f) for f in forklift_qs]
+    commercial_data = [_serialize_commercial_car(c) for c in commercial_qs]
     
     # Calculate Averages (Seconds)
     avg_portaria = Checklist.objects.aggregate(Avg('tempo_execucao'))['tempo_execucao__avg'] or 0
     avg_truck = MaintenanceTruck.objects.aggregate(Avg('tempo_execucao'))['tempo_execucao__avg'] or 0
     avg_trailer = MaintenanceTrailer.objects.aggregate(Avg('tempo_execucao'))['tempo_execucao__avg'] or 0
     avg_forklift = ChecklistForklift.objects.aggregate(Avg('tempo_execucao'))['tempo_execucao__avg'] or 0
+    avg_commercial = ChecklistCarroComercial.objects.aggregate(Avg('tempo_execucao'))['tempo_execucao__avg'] or 0
 
     context = {
         'portaria_json': json.dumps(portaria_data, cls=DjangoJSONEncoder),
         'truck_json': json.dumps(truck_data, cls=DjangoJSONEncoder),
         'trailer_json': json.dumps(trailer_data, cls=DjangoJSONEncoder),
         'forklift_json': json.dumps(forklift_data, cls=DjangoJSONEncoder),
+        'commercial_json': json.dumps(commercial_data, cls=DjangoJSONEncoder),
         'averages': {
             'portaria': f"{int(avg_portaria // 60):02d}:{int(avg_portaria % 60):02d}",
             'truck': f"{int(avg_truck // 60):02d}:{int(avg_truck % 60):02d}",
             'trailer': f"{int(avg_trailer // 60):02d}:{int(avg_trailer % 60):02d}",
             'forklift': f"{int(avg_forklift // 60):02d}:{int(avg_forklift % 60):02d}",
+            'commercial': f"{int(avg_commercial // 60):02d}:{int(avg_commercial % 60):02d}",
         }
     }
     return render(request, 'dashboard.html', context)
@@ -1478,6 +1499,9 @@ def resolve_checklist_view(request, checklist_type, pk):
         elif checklist_type == 'forklift':
             ModelClass = ChecklistForklift
             redirect_url = 'forklift_detail'
+        elif checklist_type == 'carro_comercial':
+            ModelClass = ChecklistCarroComercial
+            redirect_url = 'commercial_car_detail'
 
         if ModelClass:
             checklist = get_object_or_404(ModelClass, pk=pk)
@@ -1508,6 +1532,8 @@ def download_checklist_photos_zip(request, checklist_type, pk):
         ModelClass = Checklist
     elif checklist_type == 'forklift':
         ModelClass = ChecklistForklift
+    elif checklist_type == 'carro_comercial':
+        ModelClass = ChecklistCarroComercial
     
     if not ModelClass:
         messages.error(request, 'Tipo de checklist inválido.')
@@ -1535,3 +1561,67 @@ def download_checklist_photos_zip(request, checklist_type, pk):
     response = HttpResponse(buffer.read(), content_type='application/zip')
     response['Content-Disposition'] = f'attachment; filename="fotos_checklist_{checklist_type}_{pk}.zip"'
     return response
+
+@login_required
+def commercial_car_create_view(request):
+    if request.user.profile.role not in ['MANUTENCAO', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito à Manutenção.")
+        return redirect('home')
+        
+    if request.method == 'POST':
+        try:
+            veiculo = Veiculo.objects.filter(tipo='CARRO_COMERCIAL').first()
+            if not veiculo:
+                veiculo = Veiculo.objects.create(
+                    placa='VIRTUS',
+                    tipo='CARRO_COMERCIAL',
+                    marca_modelo='VW Virtus 2026 Confortline'
+                )
+            
+            instance = ChecklistCarroComercial(
+                responsavel=request.user,
+                veiculo=veiculo,
+                nome_condutor=request.POST.get('nome_condutor', ''),
+                observacoes=request.POST.get('observacoes', ''),
+                visto_responsavel=request.POST.get('visto_responsavel', ''),
+                visto_motorista=request.POST.get('visto_motorista', ''),
+                quilometragem=request.POST.get('quilometragem', ''),
+                nivel_combustivel=int(request.POST.get('nivel_combustivel', 0)),
+                tempo_execucao=int(request.POST.get('tempo_execucao', 0)) or None,
+            )
+
+            # Atribuir checkboxes dinamicamente
+            for item in COMMERCIAL_CAR_ITEMS:
+                field_value = request.POST.get(item['id'], 'NA')
+                setattr(instance, item['id'], field_value)
+                
+            instance.save()
+            
+            # Fotos
+            photos = request.FILES.getlist('photos')
+            for f in photos:
+                _process_and_save_photo(instance, f)
+
+            # Alert if NC or observations exist
+            has_nc = any(getattr(instance, item['id']) == 'NAO' for item in COMMERCIAL_CAR_ITEMS)
+            if has_nc or (instance.observacoes and instance.observacoes.strip()):
+                _send_maintenance_alert(instance, "CARRO COMERCIAL", request)
+
+            _notify_new_checklist_push(instance, "Carro Comercial")
+
+            messages.success(request, 'Checklist de Carro Comercial salvo com sucesso!')
+            return redirect('dashboard')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao salvar: {str(e)}')
+
+    context = {
+        'items': COMMERCIAL_CAR_ITEMS,
+        'veiculos': Veiculo.objects.filter(tipo='CARRO_COMERCIAL').order_by('placa'),
+    }
+    return render(request, 'commercial_car_form.html', context)
+
+@login_required
+def commercial_car_detail_view(request, pk):
+    checklist = get_object_or_404(ChecklistCarroComercial, pk=pk)
+    return render(request, 'commercial_car_detail.html', {'checklist': checklist})

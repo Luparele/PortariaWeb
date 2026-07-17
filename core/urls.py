@@ -24,7 +24,8 @@ from checklists.views import (
     maintenance_create_view, condutor_list_view, veiculo_list_view, 
     maintenance_detail_view, system_admin_view, forklift_create_view, forklift_detail_view,
     agenda_manutencao_view, schedule_create_view, schedule_update_status_view, resolve_checklist_view,
-    download_checklist_photos_zip, generate_telegram_token, telegram_webhook, home_view
+    download_checklist_photos_zip, generate_telegram_token, telegram_webhook, home_view,
+    commercial_car_create_view, commercial_car_detail_view
 )
 
 urlpatterns = [
@@ -39,6 +40,8 @@ urlpatterns = [
     path('manutencao/agenda/status/<int:pk>/', schedule_update_status_view, name='schedule_status'),
     path('manutencao/<str:m_type>/nova/', maintenance_create_view, name='maintenance_create'),
     path('manutencao/<str:m_type>/<int:pk>/', maintenance_detail_view, name='maintenance_detail'),
+    path('carro-comercial/novo/', commercial_car_create_view, name='commercial_car_create'),
+    path('carro-comercial/<int:pk>/', commercial_car_detail_view, name='commercial_car_detail'),
     path('forklift/novo/', forklift_create_view, name='forklift_create'),
     path('forklift/<int:pk>/', forklift_detail_view, name='forklift_detail'),
     path('admin/motoristas/', condutor_list_view, name='condutor_list'),

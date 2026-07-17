@@ -94,6 +94,21 @@
                 </a>
             </div>
         </div>
+
+        <div class="group relative bg-white p-2 rounded-[2rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div class="relative p-6">
+                <div class="w-14 h-14 bg-amber-100/80 text-amber-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:rotate-12 transition-transform">
+                    <i data-lucide="car" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic tracking-tighter mb-2">Carro Comercial</h3>
+                <p class="text-slate-500 text-xs font-medium leading-relaxed mb-8">Inspeção detalhada da frota de carros comerciais, combustível e estrutura.</p>
+                <a href="{% url 'commercial_car_create' %}" class="flex items-center justify-between bg-amber-500 hover:bg-amber-600 text-slate-900 p-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-amber-200 transition-all">
+                    Iniciar agora
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
         {% endif %}
 
         <!-- SECTION: EMPILHADEIRA (Depot, Admin e Superuser) -->

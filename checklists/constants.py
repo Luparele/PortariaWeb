@@ -97,3 +97,13 @@ FORKLIFT_ITEMS = [
     { 'id': 'vazamento_oleo', 'label': '9 - Sem vazamento de óleo?' },
     { 'id': 'pintura', 'label': '10 - Pintura em bom estado?' },
 ]
+
+COMMERCIAL_CAR_ITEMS = [
+    { 'id': 'partida_motor', 'label': '1 - Partida do Motor' },
+    { 'id': 'pneus', 'label': '2 - Pneus' },
+    { 'id': 'lataria', 'label': '3 - Lataria' },
+    { 'id': 'lanternas_farois', 'label': '4 - Lanternas e Farois' },
+    { 'id': 'estofamento_painel_teto', 'label': '5 - Estofamento, Painel e Teto' },
+    { 'id': 'limpeza', 'label': '6 - Limpeza' },
+    { 'id': 'step_macaco_triangulo', 'label': '7 - Step, Macaco e Triângulo' },
+]

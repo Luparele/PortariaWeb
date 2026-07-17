@@ -39,6 +39,7 @@ class Veiculo(models.Model):
     TIPO_CHOICES = [
         ('CAVALO', 'Cavalo Mecânico'),
         ('CARRETA', 'Carreta'),
+        ('CARRO_COMERCIAL', 'Carro Comercial'),
     ]
 
     CATEGORIA_CHOICES = [
@@ -594,3 +595,72 @@ class TelegramToken(models.Model):
 
     def __str__(self):
         return f"Token for {self.user.username} - {self.token}"
+
+class ChecklistCarroComercial(models.Model):
+    STATUS_CHOICES = [
+        ('SIM', 'Sim'),
+        ('NAO', 'Não'),
+        ('NA', 'N/A'),
+    ]
+    
+    veiculo = models.ForeignKey(Veiculo, on_delete=models.PROTECT, limit_choices_to={'tipo': 'CARRO_COMERCIAL'})
+    nome_condutor = models.CharField(max_length=100, verbose_name="Nome do Condutor")
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    responsavel = models.ForeignKey(User, on_delete=models.CASCADE)
+    quilometragem = models.CharField(max_length=20, blank=True, null=True)
+    nivel_combustivel = models.IntegerField(default=0) # 0 to 8
+    
+    # Itens (7)
+    partida_motor = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    pneus = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    lataria = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    lanternas_farois = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    estofamento_painel_teto = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    limpeza = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    step_macaco_triangulo = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    
+    tempo_execucao = models.PositiveIntegerField(null=True, blank=True)
+
+    @property
+    def tempo_formatado(self):
+        if self.tempo_execucao is None:
+            return "--:--"
+        minutes = self.tempo_execucao // 60
+        seconds = self.tempo_execucao % 60
+        return f"{minutes:02d}:{seconds:02d}"
+    
+    observacoes = models.TextField(blank=True, null=True)
+    visto_responsavel = models.TextField(blank=True, null=True)
+    visto_motorista = models.TextField(blank=True, null=True)
+
+    # Resolução de NC
+    resolvido_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='resolved_commercial_cars')
+    data_resolucao = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def has_nc(self):
+        if self.observacoes and self.observacoes.strip():
+            return True
+        from .constants import COMMERCIAL_CAR_ITEMS
+        for item in COMMERCIAL_CAR_ITEMS:
+            if getattr(self, item['id']) == 'NAO':
+                return True
+        return False
+
+    @property
+    def is_resolved(self):
+        return self.resolvido_por is not None
+
+    @property
+    def photos(self):
+        from django.contrib.contenttypes.models import ContentType
+        ct = ContentType.objects.get_for_model(self)
+        return ChecklistPhoto.objects.filter(content_type=ct, object_id=self.id)
+
+    class Meta:
+        verbose_name = "Checklist de Carro Comercial"
+        verbose_name_plural = "Checklists de Carro Comercial"
+
+    def __str__(self):
+        return f"MNT Carro Comercial {self.veiculo.placa} - {self.data_criacao.strftime('%d/%m/%y')}"
+
