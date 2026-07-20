@@ -1564,8 +1564,8 @@ def download_checklist_photos_zip(request, checklist_type, pk):
 
 @login_required
 def commercial_car_create_view(request):
-    if request.user.profile.role not in ['MANUTENCAO', 'ADMIN', 'SUPERUSER']:
-        messages.error(request, "Acesso restrito à Manutenção.")
+    if request.user.profile.role not in ['CONTROLADOR', 'ADMIN', 'SUPERUSER']:
+        messages.error(request, "Acesso restrito ao Checklist de Portaria.")
         return redirect('home')
         
     if request.method == 'POST':
