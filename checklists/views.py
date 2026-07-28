@@ -160,41 +160,51 @@ def _send_telegram_message(message, request=None):
         if request: messages.warning(request, "Token do Telegram vazio. Alerta não enviado.")
         return
 
-    from django.contrib.auth.models import User
-    # Injected PA Proxy
-    proxies = {"http": "http://proxy.server:3128", "https": "http://proxy.server:3128"} if os.environ.get('PYTHONANYWHERE_SITE') else None
-    
-    contacts = User.objects.exclude(profile__telegram_chat_id__isnull=True).exclude(profile__telegram_chat_id__exact='')
-    
-    for contact in contacts:
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {
-            'chat_id': contact.profile.telegram_chat_id,
-            'text': message,
-            'parse_mode': 'HTML'
-        }
-        
-        # Robust Retry Loop for Proxy 503 errors
-        for attempt in range(4):
-            try:
-                response = requests.post(url, json=payload, timeout=15, proxies=proxies)
-                if response.status_code == 200:
-                    break
-                elif response.status_code in [502, 503, 504]:
-                    # Proxy or Server temporary error
-                    sleep_time = (attempt + 1) * 2 + random.uniform(0, 1)
-                    time.sleep(sleep_time)
-                else:
-                    print(f"Erro Telegram ({contact.profile.telegram_chat_id}): {response.status_code} - {response.text}")
-                    break
-            except Exception as e:
-                name = contact.get_full_name() or contact.username
-                print(f"Erro ao enviar para {name} (Tentativa {attempt+1}): {e}")
-                if attempt == 3 and request: 
-                    messages.warning(request, f"Falha na rede ao conectar no Telegram (Possível bloqueio de Proxy/Firewall).")
-                # Exponential backoff with jitter
-                sleep_time = (attempt + 1) * 2 + random.uniform(0, 1)
-                time.sleep(sleep_time)
+    import threading
+    from django.db import connection
+
+    def _send():
+        try:
+            from django.contrib.auth.models import User
+            # Injected PA Proxy
+            proxies = {"http": "http://proxy.server:3128", "https": "http://proxy.server:3128"} if os.environ.get('PYTHONANYWHERE_SITE') else None
+            
+            contacts = list(User.objects.exclude(profile__telegram_chat_id__isnull=True).exclude(profile__telegram_chat_id__exact=''))
+            
+            for contact in contacts:
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload = {
+                    'chat_id': contact.profile.telegram_chat_id,
+                    'text': message,
+                    'parse_mode': 'HTML'
+                }
+                
+                # Robust Retry Loop for Proxy 503 errors
+                for attempt in range(4):
+                    try:
+                        import requests
+                        response = requests.post(url, json=payload, timeout=15, proxies=proxies)
+                        if response.status_code == 200:
+                            break
+                        elif response.status_code in [502, 503, 504]:
+                            # Proxy or Server temporary error
+                            sleep_time = (attempt + 1) * 2 + random.uniform(0, 1)
+                            time.sleep(sleep_time)
+                        else:
+                            print(f"Erro Telegram ({contact.profile.telegram_chat_id}): {response.status_code} - {response.text}")
+                            break
+                    except Exception as e:
+                        name = contact.get_full_name() or contact.username
+                        print(f"Erro ao enviar para {name} (Tentativa {attempt+1}): {e}")
+                        # Exponential backoff with jitter
+                        sleep_time = (attempt + 1) * 2 + random.uniform(0, 1)
+                        time.sleep(sleep_time)
+        finally:
+            connection.close()
+
+    t = threading.Thread(target=_send)
+    t.daemon = True
+    t.start()
 
 def _send_single_telegram_message(chat_id, message):
     """Sends a message to a specific chat_id with retry logic and detailed error return"""
@@ -438,20 +448,31 @@ def _send_schedule_alerts(schedule, request=None):
 
 def _send_push_to_roles(roles, title, message, url='/'):
     """Sends a push notification to all users with specific roles"""
-    from django.contrib.auth.models import User
-    from webpush import send_user_notification
-    users = User.objects.filter(profile__role__in=roles)
-    payload = {
-        "title": title,
-        "body": message,
-        "url": url,
-        "icon": "/static/img/pwa-icon.png"
-    }
-    for user in users:
+    import threading
+    from django.db import connection
+
+    def _send():
         try:
-            send_user_notification(user=user, payload=payload, ttl=1000)
-        except Exception as e:
-            print(f"Erro ao enviar push para {user.username}: {e}")
+            from django.contrib.auth.models import User
+            from webpush import send_user_notification
+            users = list(User.objects.filter(profile__role__in=roles))
+            payload = {
+                "title": title,
+                "body": message,
+                "url": url,
+                "icon": "/static/img/pwa-icon.png"
+            }
+            for user in users:
+                try:
+                    send_user_notification(user=user, payload=payload, ttl=1000)
+                except Exception as e:
+                    print(f"Erro ao enviar push para {user.username}: {e}")
+        finally:
+            connection.close()
+
+    t = threading.Thread(target=_send)
+    t.daemon = True
+    t.start()
 
 def _notify_new_checklist_push(checklist, type_label):
     """Notify managers about a new checklist via PWA Push"""
