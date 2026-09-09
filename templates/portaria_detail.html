@@ -150,8 +150,9 @@
                 <div class="p-6">
                     <!-- Cavalo -->
                     <div class="mb-4 pb-4 border-b border-slate-50">
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                             {% include 'partials/info_item.html' with label='Placa Cavalo' value=checklist.placa_cavalo.placa icon='truck' %}
+                            {% include 'partials/info_item.html' with label='Eixo Erguido' value=checklist.eixo_erguido_cavalo %}
                             {% include 'partials/info_item.html' with label='Marca/Modelo' value=checklist.placa_cavalo.marca_modelo %}
                             {% include 'partials/info_item.html' with label='Ano' value=checklist.placa_cavalo.ano %}
                             {% include 'partials/info_item.html' with label='RENAVAN' value=checklist.placa_cavalo.renavam %}
@@ -160,9 +161,10 @@
 
                     <!-- Carreta 1 -->
                     <div class="mb-4 pb-4 border-b border-slate-50">
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                             {% include 'partials/info_item.html' with label='Placa Carreta 01' value=checklist.placa_carreta_01.placa|default:"-" icon='trailer' %}
                             {% if checklist.placa_carreta_01 %}
+                                {% include 'partials/info_item.html' with label='Eixo Erguido' value=checklist.eixo_erguido_carreta_01 %}
                                 {% include 'partials/info_item.html' with label='Marca/Modelo' value=checklist.placa_carreta_01.marca_modelo %}
                                 {% include 'partials/info_item.html' with label='Categoria' value=checklist.placa_carreta_01.get_categoria_display %}
                                 {% include 'partials/info_item.html' with label='Ano' value=checklist.placa_carreta_01.ano %}
@@ -174,8 +176,9 @@
                     <!-- Carreta 2 (Opcional) -->
                     {% if checklist.placa_carreta_02 %}
                     <div class="mb-4 pb-4 border-b border-slate-50">
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                             {% include 'partials/info_item.html' with label='Placa Carreta 02' value=checklist.placa_carreta_02.placa icon='trailer' %}
+                            {% include 'partials/info_item.html' with label='Eixo Erguido' value=checklist.eixo_erguido_carreta_02 %}
                             {% include 'partials/info_item.html' with label='Marca/Modelo' value=checklist.placa_carreta_02.marca_modelo %}
                             {% include 'partials/info_item.html' with label='Categoria' value=checklist.placa_carreta_02.get_categoria_display %}
                             {% include 'partials/info_item.html' with label='Ano' value=checklist.placa_carreta_02.ano %}
@@ -202,6 +205,7 @@
                     {% include 'partials/check_item.html' with label='Luz de Freio' value=checklist.eletrica_freio %}
                     {% include 'partials/check_item.html' with label='Capas Lanternas' value=checklist.eletrica_capas %}
                     {% include 'partials/check_item.html' with label='Luz de Placa' value=checklist.eletrica_placa %}
+                    {% include 'partials/check_item.html' with label='Sirene de Ré' value=checklist.eletrica_sirene_re %}
                 </div>
             </div>
             
@@ -224,6 +228,7 @@
                     {% include 'partials/check_item.html' with label='Step/Reserva' value=checklist.rodas_pneus_reserva %}
                     {% include 'partials/check_item.html' with label='Estado Geral' value=checklist.rodas_pneus_estado %}
                     {% include 'partials/check_item.html' with label='Cortes/Bolhas' value=checklist.rodas_pneus_cortes_bolhas %}
+                    {% include 'partials/check_item.html' with label='Calço Rodas' value=checklist.rodas_pneus_calco %}
                 </div>
             </div>
         </div>
@@ -356,8 +361,9 @@
 
         <div class="border-2 border-black mb-4">
             <!-- Cavalo -->
-            <div class="grid grid-cols-4 gap-2 px-4 py-2 border-b border-black bg-gray-100">
+            <div class="grid grid-cols-5 gap-2 px-4 py-2 border-b border-black bg-gray-100">
                 <div class="text-[9px]"><strong>PLACA CAVALO:</strong><br>{{ checklist.placa_cavalo.placa }}</div>
+                <div class="text-[9px]"><strong>EIXO ERGUIDO:</strong><br>{{ checklist.eixo_erguido_cavalo }}</div>
                 <div class="text-[9px]"><strong>MARCA/MODELO:</strong><br>{{ checklist.placa_cavalo.marca_modelo }}</div>
                 <div class="text-[9px]"><strong>ANO:</strong><br>{{ checklist.placa_cavalo.ano }}</div>
                 <div class="text-[9px]"><strong>RENAVAN:</strong><br>{{ checklist.placa_cavalo.renavam|default:"-" }}</div>
@@ -370,19 +376,21 @@
             </div>
 
             <!-- Carretas -->
-            <div class="grid grid-cols-5 gap-2 px-4 py-2 bg-gray-50 border-b border-black">
+            <div class="grid grid-cols-6 gap-2 px-4 py-2 bg-gray-50 border-b border-black">
                 <div class="text-[9px]"><strong>PLACA CARRETA 01:</strong><br>{{ checklist.placa_carreta_01.placa|default:"-" }}</div>
                 {% if checklist.placa_carreta_01 %}
+                <div class="text-[9px]"><strong>EIXO ERGUIDO:</strong><br>{{ checklist.eixo_erguido_carreta_01 }}</div>
                 <div class="text-[9px]"><strong>MARCA/MODELO:</strong><br>{{ checklist.placa_carreta_01.marca_modelo }}</div>
                 <div class="text-[9px]"><strong>CATEGORIA:</strong><br>{{ checklist.placa_carreta_01.get_categoria_display }}</div>
                 <div class="text-[9px]"><strong>ANO:</strong><br>{{ checklist.placa_carreta_01.ano }}</div>
                 <div class="text-[9px]"><strong>RENAVAN:</strong><br>{{ checklist.placa_carreta_01.renavam|default:"-" }}</div>
-                {% else %}<div class="col-span-4"></div>{% endif %}
+                {% else %}<div class="col-span-5"></div>{% endif %}
             </div>
 
             {% if checklist.placa_carreta_02 %}
-            <div class="grid grid-cols-5 gap-2 px-4 py-2 bg-gray-50 border-b border-black">
+            <div class="grid grid-cols-6 gap-2 px-4 py-2 bg-gray-50 border-b border-black">
                 <div class="text-[9px]"><strong>PLACA CARRETA 02:</strong><br>{{ checklist.placa_carreta_02.placa }}</div>
+                <div class="text-[9px]"><strong>EIXO ERGUIDO:</strong><br>{{ checklist.eixo_erguido_carreta_02 }}</div>
                 <div class="text-[9px]"><strong>MARCA/MODELO:</strong><br>{{ checklist.placa_carreta_02.marca_modelo }}</div>
                 <div class="text-[9px]"><strong>CATEGORIA:</strong><br>{{ checklist.placa_carreta_02.get_categoria_display }}</div>
                 <div class="text-[9px]"><strong>ANO:</strong><br>{{ checklist.placa_carreta_02.ano }}</div>
@@ -407,20 +415,22 @@
             <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">4. LUZ DE FREIO:</span><span class="text-[9px] font-black">{% if checklist.eletrica_freio == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_freio == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
             <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">5. CAPAS LANTERNAS:</span><span class="text-[9px] font-black">{% if checklist.eletrica_capas == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_capas == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
             <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">6. LUZ DE PLACA:</span><span class="text-[9px] font-black">{% if checklist.eletrica_placa == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_placa == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">7. SIRENE RÉ:</span><span class="text-[9px] font-black">{% if checklist.eletrica_sirene_re == 'SIM' %}[X] CONFORME{% elif checklist.eletrica_sirene_re == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
             
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">7. FREIOS REG.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_freios == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_freios == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">8. CONEXÕES ENG.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_conexoes == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_conexoes == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">9. FOLGA 5ª RODA:</span><span class="text-[9px] font-black">{% if checklist.mecanica_folga_quinta_roda == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_folga_quinta_roda == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">10. SUSPENSÃO:</span><span class="text-[9px] font-black">{% if checklist.mecanica_suspensao == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_suspensao == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">11. FREIO ESTAC.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_freio_estacionario == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_freio_estacionario == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">12. TRAVAS CONT.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_travas_conteiner == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_travas_conteiner == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">13. TAMPAS EQUIP.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_tampas_equipamento == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_tampas_equipamento == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">14. ESTADO TAMPAS:</span><span class="text-[9px] font-black">{% if checklist.mecanica_tampas_estado == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_tampas_estado == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">8. FREIOS REG.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_freios == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_freios == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">9. CONEXÕES ENG.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_conexoes == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_conexoes == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">10. FOLGA 5ª RODA:</span><span class="text-[9px] font-black">{% if checklist.mecanica_folga_quinta_roda == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_folga_quinta_roda == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">11. SUSPENSÃO:</span><span class="text-[9px] font-black">{% if checklist.mecanica_suspensao == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_suspensao == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">12. FREIO ESTAC.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_freio_estacionario == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_freio_estacionario == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">13. TRAVAS CONT.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_travas_conteiner == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_travas_conteiner == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">14. TAMPAS EQUIP.:</span><span class="text-[9px] font-black">{% if checklist.mecanica_tampas_equipamento == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_tampas_equipamento == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">15. ESTADO TAMPAS:</span><span class="text-[9px] font-black">{% if checklist.mecanica_tampas_estado == 'SIM' %}[X] CONFORME{% elif checklist.mecanica_tampas_estado == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
             
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">15. QTD PNEUS:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_quantidade == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_quantidade == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">16. STEP/RESERVA:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_reserva == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_reserva == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">17. ESTADO GERAL:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_estado == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_estado == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
-            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">18. CORTES/BOLHAS:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_cortes_bolhas == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_cortes_bolhas == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">16. QTD PNEUS:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_quantidade == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_quantidade == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">17. STEP/RESERVA:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_reserva == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_reserva == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">18. ESTADO GERAL:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_estado == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_estado == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">19. CORTES/BOLHAS:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_cortes_bolhas == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_cortes_bolhas == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
+            <div class="flex justify-between border-b border-gray-200 py-0.5"><span class="text-[9px] font-bold">20. CALÇO RODAS:</span><span class="text-[9px] font-black">{% if checklist.rodas_pneus_calco == 'SIM' %}[X] CONFORME{% elif checklist.rodas_pneus_calco == 'NAO' %}[ ] NÃO CONF.{% else %}[N/A]{% endif %}</span></div>
         </div>
 
         <div class="grid grid-cols-2 gap-12 mt-12 px-8">

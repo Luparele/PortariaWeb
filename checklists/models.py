@@ -74,9 +74,12 @@ class Checklist(models.Model):
     ]
 
     placa_cavalo = models.ForeignKey(Veiculo, on_delete=models.PROTECT, related_name='checklists_cavalo', limit_choices_to={'tipo': 'CAVALO'})
+    eixo_erguido_cavalo = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     nome_motorista = models.ForeignKey(Condutor, on_delete=models.PROTECT, related_name='checklists')
     placa_carreta_01 = models.ForeignKey(Veiculo, on_delete=models.SET_NULL, related_name='checklists_carreta1', blank=True, null=True, limit_choices_to={'tipo': 'CARRETA'})
+    eixo_erguido_carreta_01 = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     placa_carreta_02 = models.ForeignKey(Veiculo, on_delete=models.SET_NULL, related_name='checklists_carreta2', blank=True, null=True, limit_choices_to={'tipo': 'CARRETA'})
+    eixo_erguido_carreta_02 = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     doc_carreta_entregue = models.BooleanField(default=False)
     
     # Parte Eletrica
@@ -86,6 +89,7 @@ class Checklist(models.Model):
     eletrica_freio = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     eletrica_capas = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     eletrica_placa = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    eletrica_sirene_re = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
 
     # Sistema Mecanico
     mecanica_freios = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
@@ -102,6 +106,7 @@ class Checklist(models.Model):
     rodas_pneus_reserva = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     rodas_pneus_estado = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     rodas_pneus_cortes_bolhas = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    rodas_pneus_calco = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
 
     anomalias = models.TextField(blank=True, null=True)
     data_criacao = models.DateTimeField(auto_now_add=True)
@@ -135,10 +140,10 @@ class Checklist(models.Model):
             return True
         # Check condition fields
         fields = [
-            'eletrica_condicoes', 'eletrica_seta', 'eletrica_re', 'eletrica_freio', 'eletrica_capas', 'eletrica_placa',
+            'eletrica_condicoes', 'eletrica_seta', 'eletrica_re', 'eletrica_freio', 'eletrica_capas', 'eletrica_placa', 'eletrica_sirene_re',
             'mecanica_freios', 'mecanica_conexoes', 'mecanica_folga_quinta_roda', 'mecanica_suspensao', 
             'mecanica_freio_estacionario', 'mecanica_travas_conteiner', 'mecanica_tampas_equipamento', 'mecanica_tampas_estado',
-            'rodas_pneus_quantidade', 'rodas_pneus_reserva', 'rodas_pneus_estado', 'rodas_pneus_cortes_bolhas'
+            'rodas_pneus_quantidade', 'rodas_pneus_reserva', 'rodas_pneus_estado', 'rodas_pneus_cortes_bolhas', 'rodas_pneus_calco'
         ]
         for f in fields:
             if getattr(self, f) == 'NAO':

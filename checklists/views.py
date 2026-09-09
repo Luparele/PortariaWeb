@@ -709,6 +709,9 @@ def portaria_create_view(request):
                 nome_motorista=nome_motorista,
                 placa_carreta_01=placa_carreta_01,
                 placa_carreta_02=placa_carreta_02,
+                eixo_erguido_cavalo=request.POST.get('eixo_erguido_cavalo', 'NA'),
+                eixo_erguido_carreta_01=request.POST.get('eixo_erguido_carreta_01', 'NA'),
+                eixo_erguido_carreta_02=request.POST.get('eixo_erguido_carreta_02', 'NA'),
                 doc_carreta_entregue=request.POST.get('doc_carreta_entregue') == 'on',
                 
                 # Eletrica
@@ -718,6 +721,7 @@ def portaria_create_view(request):
                 eletrica_freio=request.POST.get('eletrica_freio', 'NA'),
                 eletrica_capas=request.POST.get('eletrica_capas', 'NA'),
                 eletrica_placa=request.POST.get('eletrica_placa', 'NA'),
+                eletrica_sirene_re=request.POST.get('eletrica_sirene_re', 'NA'),
 
                 # Mecanica
                 mecanica_freios=request.POST.get('mecanica_freios', 'NA'),
@@ -734,6 +738,7 @@ def portaria_create_view(request):
                 rodas_pneus_reserva=request.POST.get('rodas_pneus_reserva', 'NA'),
                 rodas_pneus_estado=request.POST.get('rodas_pneus_estado', 'NA'),
                 rodas_pneus_cortes_bolhas=request.POST.get('rodas_pneus_cortes_bolhas', 'NA'),
+                rodas_pneus_calco=request.POST.get('rodas_pneus_calco', 'NA'),
 
                 anomalias=request.POST.get('anomalias', ''),
                 visto_responsavel_saida=request.POST.get('visto_responsavel_saida', ''),
