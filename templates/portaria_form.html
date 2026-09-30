@@ -77,6 +77,29 @@
     </div>
 
     <fieldset id="formContent" disabled class="opacity-40 pointer-events-none transition-all duration-700 blur-[2px]">
+        <!-- TIPO DE CHECKLIST -->
+        <div class="mb-8">
+            <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-l-4 border-blue-600 pl-3 bg-slate-50 py-3 rounded-r-xl italic">TIPO DE CHECKLIST</h3>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-6">
+                <div class="flex gap-4">
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="tipo_checklist" value="ENTRADA" class="peer sr-only" required>
+                        <div class="rounded-xl border-2 border-slate-200 p-4 text-center hover:bg-slate-50 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 transition-all">
+                            <i data-lucide="log-in" class="w-8 h-8 mx-auto mb-2"></i>
+                            <span class="font-bold uppercase tracking-tight">Entrada</span>
+                        </div>
+                    </label>
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="tipo_checklist" value="SAIDA" class="peer sr-only" required>
+                        <div class="rounded-xl border-2 border-slate-200 p-4 text-center hover:bg-slate-50 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 transition-all">
+                            <i data-lucide="log-out" class="w-8 h-8 mx-auto mb-2"></i>
+                            <span class="font-bold uppercase tracking-tight">Saída</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <!-- IDENTIFICAÇÃO -->
         <div class="mb-8">
             <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-l-4 border-blue-600 pl-3 bg-slate-50 py-3 rounded-r-xl italic">IDENTIFICAÇÃO</h3>
@@ -168,7 +191,9 @@
                 {% include 'partials/radio_inline.html' with name='eletrica_freio' label='4 - Luz de freio (esq/dir) em funcionamento?' %}
                 {% include 'partials/radio_inline.html' with name='eletrica_capas' label='5 - Capas das lanternas sem avarias?' %}
                 {% include 'partials/radio_inline.html' with name='eletrica_placa' label='6 - Luz de placa em perfeito funcionamento?' %}
-                {% include 'partials/radio_inline.html' with name='eletrica_sirene_re' label='7 - Sirene de Ré em perfeito funcionamento?' %}
+                {% include 'partials/radio_inline.html' with name='eletrica_sirene_re' label='7 - Sirene de Ré (Cavalo) em perfeito funcionamento?' %}
+                {% include 'partials/radio_inline.html' with name='eletrica_sirene_re_carreta_01' label='8 - Sirene de Ré (Carreta 1) em perfeito funcionamento?' %}
+                {% include 'partials/radio_inline.html' with name='eletrica_sirene_re_carreta_02' label='9 - Sirene de Ré (Carreta 2) em perfeito funcionamento?' %}
             </div>
         </div>
     
@@ -176,14 +201,14 @@
         <div class="mb-8">
             <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-l-4 border-blue-600 pl-3 bg-slate-50 py-3 rounded-r-xl italic">SISTEMA MECÂNICO E ACESSÓRIOS</h3>
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden px-4">
-                {% include 'partials/radio_inline.html' with name='mecanica_freios' label='8 - Freios regulados?' %}
-                {% include 'partials/radio_inline.html' with name='mecanica_conexoes' label='9 - Conexões de engate rápido plenamente funcionais?' %}
-                {% include 'partials/radio_inline.html' with name='mecanica_folga_quinta_roda' label='10 - Ausência de folga no travamento da 5ª roda?' %}
-                {% include 'partials/radio_inline.html' with name='mecanica_suspensao' label='11 - Isento de problemas visíveis na suspensão?' %}
-                {% include 'partials/radio_inline.html' with name='mecanica_freio_estacionario' label='12 - Freio estacionário em perfeito estado?' %}
-                {% include 'partials/radio_inline.html' with name='mecanica_travas_conteiner' label='13 - Todas as travas de contêineres no lugar?' %}
-                {% include 'partials/radio_inline.html' with name='mecanica_tampas_equipamento' label='14 - Equipamento dispõe de todas as tampas?' %}
-                {% include 'partials/radio_inline.html' with name='mecanica_tampas_estado' label='15 - Todas as tampas estão em perfeito estado?' %}
+                {% include 'partials/radio_inline.html' with name='mecanica_freios' label='10 - Freios regulados?' %}
+                {% include 'partials/radio_inline.html' with name='mecanica_conexoes' label='11 - Conexões de engate rápido plenamente funcionais?' %}
+                {% include 'partials/radio_inline.html' with name='mecanica_folga_quinta_roda' label='12 - Ausência de folga no travamento da 5ª roda?' %}
+                {% include 'partials/radio_inline.html' with name='mecanica_suspensao' label='13 - Isento de problemas visíveis na suspensão?' %}
+                {% include 'partials/radio_inline.html' with name='mecanica_freio_estacionario' label='14 - Freio estacionário em perfeito estado?' %}
+                {% include 'partials/radio_inline.html' with name='mecanica_travas_conteiner' label='15 - Todas as travas de contêineres no lugar?' %}
+                {% include 'partials/radio_inline.html' with name='mecanica_tampas_equipamento' label='16 - Equipamento dispõe de todas as tampas?' %}
+                {% include 'partials/radio_inline.html' with name='mecanica_tampas_estado' label='17 - Todas as tampas estão em perfeito estado?' %}
             </div>
         </div>
     
@@ -191,11 +216,11 @@
         <div class="mb-8">
             <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-l-4 border-blue-600 pl-3 bg-slate-50 py-3 rounded-r-xl italic">RODAS E PNEUS</h3>
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden px-4">
-                {% include 'partials/radio_inline.html' with name='rodas_pneus_quantidade' label='16 - Equipamento com pneus p/ todos os eixos?' %}
-                {% include 'partials/radio_inline.html' with name='rodas_pneus_reserva' label='17 - Possui pneu reserva (step) em bom estado?' %}
-                {% include 'partials/radio_inline.html' with name='rodas_pneus_estado' label='18 - Pneus em bom estado visivelmente?' %}
-                {% include 'partials/radio_inline.html' with name='rodas_pneus_cortes_bolhas' label='19 - Pneus externos sem cortes ou bolhas?' %}
-                {% include 'partials/radio_inline.html' with name='rodas_pneus_calco' label='20 - Calço de rodas presente e em bom estado?' %}
+                {% include 'partials/radio_inline.html' with name='rodas_pneus_quantidade' label='18 - Equipamento com pneus p/ todos os eixos?' %}
+                {% include 'partials/radio_inline.html' with name='rodas_pneus_reserva' label='19 - Possui pneu reserva (step) em bom estado?' %}
+                {% include 'partials/radio_inline.html' with name='rodas_pneus_estado' label='20 - Pneus em bom estado visivelmente?' %}
+                {% include 'partials/radio_inline.html' with name='rodas_pneus_cortes_bolhas' label='21 - Pneus externos sem cortes ou bolhas?' %}
+                {% include 'partials/radio_inline.html' with name='rodas_pneus_calco' label='22 - Calço de rodas presente e em bom estado?' %}
             </div>
         </div>
     

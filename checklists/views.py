@@ -704,6 +704,7 @@ def portaria_create_view(request):
 
             # Construir objeto
             checklist = Checklist(
+                tipo_checklist=request.POST.get('tipo_checklist', 'ENTRADA'),
                 porteiro=request.user,
                 placa_cavalo=placa_cavalo,
                 nome_motorista=nome_motorista,
@@ -722,6 +723,8 @@ def portaria_create_view(request):
                 eletrica_capas=request.POST.get('eletrica_capas', 'NA'),
                 eletrica_placa=request.POST.get('eletrica_placa', 'NA'),
                 eletrica_sirene_re=request.POST.get('eletrica_sirene_re', 'NA'),
+                eletrica_sirene_re_carreta_01=request.POST.get('eletrica_sirene_re_carreta_01', 'NA'),
+                eletrica_sirene_re_carreta_02=request.POST.get('eletrica_sirene_re_carreta_02', 'NA'),
 
                 # Mecanica
                 mecanica_freios=request.POST.get('mecanica_freios', 'NA'),

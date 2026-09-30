@@ -67,12 +67,17 @@ class Veiculo(models.Model):
         return f"{self.placa} ({self.marca_modelo})"
 
 class Checklist(models.Model):
+    TIPO_CHECKLIST_CHOICES = [
+        ('ENTRADA', 'Entrada'),
+        ('SAIDA', 'Saída'),
+    ]
     STATUS_CHOICES = [
         ('SIM', 'Sim'),
         ('NAO', 'Não'),
         ('NA', 'N/A'),
     ]
 
+    tipo_checklist = models.CharField(max_length=10, choices=TIPO_CHECKLIST_CHOICES, default='ENTRADA', verbose_name="Tipo de Checklist")
     placa_cavalo = models.ForeignKey(Veiculo, on_delete=models.PROTECT, related_name='checklists_cavalo', limit_choices_to={'tipo': 'CAVALO'})
     eixo_erguido_cavalo = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     nome_motorista = models.ForeignKey(Condutor, on_delete=models.PROTECT, related_name='checklists')
@@ -90,6 +95,8 @@ class Checklist(models.Model):
     eletrica_capas = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     eletrica_placa = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
     eletrica_sirene_re = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    eletrica_sirene_re_carreta_01 = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
+    eletrica_sirene_re_carreta_02 = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
 
     # Sistema Mecanico
     mecanica_freios = models.CharField(max_length=3, choices=STATUS_CHOICES, default='NA')
@@ -140,7 +147,8 @@ class Checklist(models.Model):
             return True
         # Check condition fields
         fields = [
-            'eletrica_condicoes', 'eletrica_seta', 'eletrica_re', 'eletrica_freio', 'eletrica_capas', 'eletrica_placa', 'eletrica_sirene_re',
+            'eletrica_condicoes', 'eletrica_seta', 'eletrica_re', 'eletrica_freio', 'eletrica_capas', 'eletrica_placa', 
+            'eletrica_sirene_re', 'eletrica_sirene_re_carreta_01', 'eletrica_sirene_re_carreta_02',
             'mecanica_freios', 'mecanica_conexoes', 'mecanica_folga_quinta_roda', 'mecanica_suspensao', 
             'mecanica_freio_estacionario', 'mecanica_travas_conteiner', 'mecanica_tampas_equipamento', 'mecanica_tampas_estado',
             'rodas_pneus_quantidade', 'rodas_pneus_reserva', 'rodas_pneus_estado', 'rodas_pneus_cortes_bolhas', 'rodas_pneus_calco'
