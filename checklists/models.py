@@ -616,6 +616,7 @@ class ChecklistCarroComercial(models.Model):
         ('NA', 'N/A'),
     ]
     
+    tipo_checklist = models.CharField(max_length=20, choices=[('ENTRADA', 'Entrada'), ('SAIDA', 'Saída')], default='SAIDA')
     veiculo = models.ForeignKey(Veiculo, on_delete=models.PROTECT, limit_choices_to={'tipo': 'CARRO_COMERCIAL'})
     nome_condutor = models.CharField(max_length=100, verbose_name="Nome do Condutor")
     data_criacao = models.DateTimeField(auto_now_add=True)

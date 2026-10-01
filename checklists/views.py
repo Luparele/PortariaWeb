@@ -1599,17 +1599,17 @@ def commercial_car_create_view(request):
         
     if request.method == 'POST':
         try:
-            veiculo = Veiculo.objects.filter(tipo='CARRO_COMERCIAL').first()
-            if not veiculo:
-                veiculo = Veiculo.objects.create(
-                    placa='VIRTUS',
-                    tipo='CARRO_COMERCIAL',
-                    marca_modelo='VW Virtus 2026 Confortline'
-                )
+            veiculo_id = request.POST.get('veiculo_id')
+            if not veiculo_id:
+                messages.error(request, 'Selecione um veículo.')
+                return redirect('commercial_car_create')
+            
+            veiculo = Veiculo.objects.get(id=veiculo_id, tipo='CARRO_COMERCIAL')
             
             instance = ChecklistCarroComercial(
                 responsavel=request.user,
                 veiculo=veiculo,
+                tipo_checklist=request.POST.get('tipo_checklist', 'SAIDA'),
                 nome_condutor=request.POST.get('nome_condutor', ''),
                 observacoes=request.POST.get('observacoes', ''),
                 visto_responsavel=request.POST.get('visto_responsavel', ''),

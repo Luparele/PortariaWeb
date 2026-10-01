@@ -71,6 +71,29 @@
     </div>
 
     <fieldset id="formContent" disabled class="opacity-40 pointer-events-none transition-all duration-700 blur-[2px]">
+        <!-- TIPO DE CHECKLIST -->
+        <div class="mb-8">
+            <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-l-4 border-amber-500 pl-3 bg-slate-50 py-3 rounded-r-xl italic">TIPO DE CHECKLIST</h3>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-6">
+                <div class="flex gap-4">
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="tipo_checklist" value="ENTRADA" class="peer sr-only" required>
+                        <div class="rounded-xl border-2 border-slate-200 p-4 text-center hover:bg-slate-50 peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-700 transition-all">
+                            <i data-lucide="log-in" class="w-8 h-8 mx-auto mb-2"></i>
+                            <span class="font-bold uppercase tracking-tight">Entrada</span>
+                        </div>
+                    </label>
+                    <label class="flex-1 cursor-pointer">
+                        <input type="radio" name="tipo_checklist" value="SAIDA" class="peer sr-only" required>
+                        <div class="rounded-xl border-2 border-slate-200 p-4 text-center hover:bg-slate-50 peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-700 transition-all">
+                            <i data-lucide="log-out" class="w-8 h-8 mx-auto mb-2"></i>
+                            <span class="font-bold uppercase tracking-tight">Saída</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <!-- IDENTIFICAÇÃO -->
         <div class="mb-8">
             <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 border-l-4 border-amber-500 pl-3 bg-slate-50 py-3 rounded-r-xl italic">IDENTIFICAÇÃO DO EQUIPAMENTO</h3>
@@ -78,9 +101,12 @@
                 
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Veículo Comercial</label>
-                    <div class="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 focus:ring-2 focus:ring-amber-500 font-black text-sm tracking-tighter h-[56px] uppercase outline-none transition-all flex items-center text-slate-600">
-                        VW Virtus 2026 Confortline
-                    </div>
+                    <select name="veiculo_id" required class="w-full bg-slate-50 border-0 rounded-xl px-4 py-4 focus:ring-2 focus:ring-amber-500 font-black text-sm tracking-tighter h-[56px] uppercase outline-none transition-all text-slate-600">
+                        <option value="" disabled selected>SELECIONE O VEÍCULO</option>
+                        {% for v in veiculos %}
+                        <option value="{{ v.id }}">{{ v.marca_modelo }} - {{ v.placa }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 
                 <div>
