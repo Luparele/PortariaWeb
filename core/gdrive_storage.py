@@ -20,10 +20,16 @@ class CustomGoogleDriveStorage(Storage):
         # Se estiver rodando no PythonAnywhere gratuito, precisamos forçar o proxy
         import os
         import httplib2
-        import httplib2.socks as socks
         import google_auth_httplib2
 
-        if os.environ.get('HTTPS_PROXY') or os.environ.get('HTTP_PROXY'):
+        try:
+            import socks
+            has_socks = True
+        except ImportError:
+            has_socks = False
+
+        proxy_url = os.environ.get('HTTPS_PROXY') or os.environ.get('HTTP_PROXY')
+        if proxy_url and has_socks:
             proxy_info = httplib2.ProxyInfo(
                 proxy_type=socks.PROXY_TYPE_HTTP,
                 proxy_host='proxy.server',
