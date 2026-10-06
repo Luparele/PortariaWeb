@@ -17,9 +17,9 @@ class CustomGoogleDriveStorage(Storage):
             self.credentials_file, scopes=['https://www.googleapis.com/auth/drive']
         )
         
-        # cache_discovery=False impede o erro de cache "file_cache is only supported"
-        # e evita de estourar a cota de disco do PythonAnywhere
-        self.service = build('drive', 'v3', credentials=credentials, cache_discovery=False)
+        # Usa o discovery estático (embutido na biblioteca) para evitar requisições extras
+        # e falhas de rede no PythonAnywhere
+        self.service = build('drive', 'v3', credentials=credentials, static_discovery=True)
 
     def _save(self, name, content):
         """Salva o arquivo diretamente pelo ID da pasta"""
