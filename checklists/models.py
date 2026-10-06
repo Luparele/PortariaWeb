@@ -588,8 +588,7 @@ class ChecklistPhoto(models.Model):
     def delete(self, *args, **kwargs):
         # Delete file from storage when model is deleted
         if self.file:
-            if os.path.isfile(self.file.path):
-                os.remove(self.file.path)
+            self.file.delete(save=False)
         super().delete(*args, **kwargs)
 
     def __str__(self):

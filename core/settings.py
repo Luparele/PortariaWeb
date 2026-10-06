@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'webpush',
     'checklists',
+    'gdstorage',
 ]
 
 MIDDLEWARE = [
@@ -131,12 +132,15 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # WhiteNoise storage to compress and cache static files
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "gdstorage.storage.GoogleDriveStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE = os.path.join(BASE_DIR, 'portariaweb-storage-caa7df9a2bad.json')
+GOOGLE_DRIVE_STORAGE_MEDIA_ROOT = '1YVZTXtqT-5DaSaKvbem55eVBL0AYApLB'
 
 # Media files (User uploads)
 MEDIA_URL = '/media/'

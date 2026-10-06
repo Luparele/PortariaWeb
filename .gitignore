@@ -41,5 +41,8 @@ ARQUIVOS AUXILIARES/
 *.bat
 scratch/
 .env
+# Google Drive API
+portariaweb-storage-*.json
+dados-API.txt
 
 
