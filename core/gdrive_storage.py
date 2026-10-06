@@ -17,7 +17,7 @@ class CustomGoogleDriveStorage(Storage):
         if os.path.exists(token_path):
             from google.oauth2.credentials import Credentials as UserCredentials
             credentials = UserCredentials.from_authorized_user_file(
-                token_path, scopes=['https://www.googleapis.com/auth/drive']
+                token_path, scopes=['https://www.googleapis.com/auth/drive.file']
             )
         else:
             credentials = Credentials.from_service_account_file(
