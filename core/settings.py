@@ -132,7 +132,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # WhiteNoise storage to compress and cache static files
 STORAGES = {
     "default": {
-        "BACKEND": "gdstorage.storage.GoogleDriveStorage",
+        "BACKEND": "core.gdrive_storage.CustomGoogleDriveStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
