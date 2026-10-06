@@ -25,7 +25,6 @@ class CustomGoogleDriveStorage(Storage):
             )
         
         # Se estiver rodando no PythonAnywhere gratuito, precisamos forçar o proxy
-        import os
         import httplib2
         import google_auth_httplib2
 
