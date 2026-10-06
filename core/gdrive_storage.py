@@ -17,9 +17,27 @@ class CustomGoogleDriveStorage(Storage):
             self.credentials_file, scopes=['https://www.googleapis.com/auth/drive']
         )
         
+        # Se estiver rodando no PythonAnywhere gratuito, precisamos forçar o proxy
+        import os
+        import httplib2
+        import httplib2.socks as socks
+        import google_auth_httplib2
+
+        if os.environ.get('HTTPS_PROXY') or os.environ.get('HTTP_PROXY'):
+            proxy_info = httplib2.ProxyInfo(
+                proxy_type=socks.PROXY_TYPE_HTTP,
+                proxy_host='proxy.server',
+                proxy_port=3128
+            )
+            http = httplib2.Http(proxy_info=proxy_info)
+        else:
+            http = httplib2.Http()
+
+        authed_http = google_auth_httplib2.AuthorizedHttp(credentials, http=http)
+
         # Usa o discovery estático (embutido na biblioteca) para evitar requisições extras
         # e falhas de rede no PythonAnywhere
-        self.service = build('drive', 'v3', credentials=credentials, static_discovery=True)
+        self.service = build('drive', 'v3', http=authed_http, static_discovery=True)
 
     def _save(self, name, content):
         """Salva o arquivo diretamente pelo ID da pasta"""
