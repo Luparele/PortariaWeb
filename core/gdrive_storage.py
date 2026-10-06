@@ -76,16 +76,17 @@ class CustomGoogleDriveStorage(Storage):
                 fileId=file_id,
                 body={'type': 'anyone', 'role': 'reader'}
             ).execute()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Erro ao dar permissão pública na foto: {e}")
 
         # Retorna o ID do arquivo. O Django salvará esse ID no banco de dados (no ImageField).
         return file_id
 
     def url(self, name):
         """Retorna o link direto da imagem baseado no ID que foi salvo no banco"""
-        # Como o _save retornou o ID, a variável 'name' aqui será na verdade o file_id do Google Drive!
-        return f'https://drive.google.com/uc?id={name}'
+        # O Google Drive bloqueia iframes/img tags de uc?id em alguns navegadores novos.
+        # A forma recomendada de embutir imagens publicas do drive agora é pelo endpoint de thumbnail.
+        return f'https://drive.google.com/thumbnail?id={name}&sz=w1000'
 
     def delete(self, name):
         """Deleta a imagem do Google Drive"""
