@@ -13,9 +13,16 @@ class CustomGoogleDriveStorage(Storage):
         self.credentials_file = getattr(settings, 'GOOGLE_DRIVE_STORAGE_JSON_KEY_FILE', None)
         
         # Carrega as credenciais
-        credentials = Credentials.from_service_account_file(
-            self.credentials_file, scopes=['https://www.googleapis.com/auth/drive']
-        )
+        token_path = os.path.join(settings.BASE_DIR, 'token.json')
+        if os.path.exists(token_path):
+            from google.oauth2.credentials import Credentials as UserCredentials
+            credentials = UserCredentials.from_authorized_user_file(
+                token_path, scopes=['https://www.googleapis.com/auth/drive']
+            )
+        else:
+            credentials = Credentials.from_service_account_file(
+                self.credentials_file, scopes=['https://www.googleapis.com/auth/drive']
+            )
         
         # Se estiver rodando no PythonAnywhere gratuito, precisamos forçar o proxy
         import os
