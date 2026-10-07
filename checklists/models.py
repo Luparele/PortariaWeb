@@ -700,3 +700,41 @@ def intercept_base64_signatures(sender, instance, **kwargs):
                     # O helper vai subir a imagem pro Google Drive e retornar o link
                     new_val = process_base64_signature(val, filename_prefix=f"assinatura_{sender.__name__}")
                     setattr(instance, field.name, new_val)
+
+from django.db.models.signals import post_delete
+
+@receiver(post_delete, sender=ChecklistPhoto)
+def auto_delete_photo_on_delete(sender, instance, **kwargs):
+    """Deleta a foto do Google Drive quando o registro do ChecklistPhoto é apagado (mesmo via Admin Cascade)"""
+    if instance.file:
+        try:
+            instance.file.delete(save=False)
+        except Exception as e:
+            print(f"Erro ao deletar foto do Drive: {e}")
+
+@receiver(post_delete)
+def auto_delete_signatures_on_delete(sender, instance, **kwargs):
+    """Deleta as assinaturas do Google Drive quando o Checklist é apagado"""
+    modelos_com_assinatura = [
+        'Checklist', 'MaintenanceTruck', 'MaintenanceTrailer', 
+        'ChecklistForklift', 'ChecklistCarroComercial'
+    ]
+    
+    if sender.__name__ in modelos_com_assinatura:
+        storage = None
+        import re
+        for field in instance._meta.fields:
+            if field.name.startswith('visto_'):
+                val = getattr(instance, field.name)
+                if val and isinstance(val, str) and 'drive.google.com' in val:
+                    # Extrai o ID do arquivo do Google Drive da URL
+                    match = re.search(r'id=([a-zA-Z0-9_-]+)', val)
+                    if match:
+                        file_id = match.group(1)
+                        if storage is None:
+                            from core.gdrive_storage import CustomGoogleDriveStorage
+                            storage = CustomGoogleDriveStorage()
+                        try:
+                            storage.delete(file_id)
+                        except Exception as e:
+                            print(f"Erro ao deletar assinatura do Drive: {e}")
