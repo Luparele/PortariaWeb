@@ -706,35 +706,51 @@ from django.db.models.signals import post_delete
 @receiver(post_delete, sender=ChecklistPhoto)
 def auto_delete_photo_on_delete(sender, instance, **kwargs):
     """Deleta a foto do Google Drive quando o registro do ChecklistPhoto é apagado (mesmo via Admin Cascade)"""
+    print(f"SINAL DELETAR FOTO ACIONADO para Foto ID: {instance.id}")
     if instance.file:
         try:
+            print(f"Chamando delete do arquivo com nome: {instance.file.name}")
             instance.file.delete(save=False)
         except Exception as e:
-            print(f"Erro ao deletar foto do Drive: {e}")
+            print(f"Erro ao deletar foto do Drive (Sinal): {e}")
 
 @receiver(post_delete)
 def auto_delete_signatures_on_delete(sender, instance, **kwargs):
-    """Deleta as assinaturas do Google Drive quando o Checklist é apagado"""
+    """Deleta as assinaturas e fotos orfãs do Google Drive quando o Checklist é apagado"""
     modelos_com_assinatura = [
         'Checklist', 'MaintenanceTruck', 'MaintenanceTrailer', 
         'ChecklistForklift', 'ChecklistCarroComercial'
     ]
     
     if sender.__name__ in modelos_com_assinatura:
+        import logging
+        logging.warning(f"SINAL DELETAR ACIONADO para {sender.__name__} ID: {instance.id}")
+        
+        # 1. Apagar as fotos órfãs (pois GenericForeignKey não faz cascade automático)
+        try:
+            from django.contrib.contenttypes.models import ContentType
+            ct = ContentType.objects.get_for_model(sender)
+            fotos = ChecklistPhoto.objects.filter(content_type=ct, object_id=instance.id)
+            for foto in fotos:
+                foto.delete() # Isso vai acionar o sinal 'auto_delete_photo_on_delete'
+        except Exception as e:
+            logging.error(f"Erro ao deletar fotos atreladas: {e}")
+
+        # 2. Apagar as assinaturas do Drive
         storage = None
         import re
         for field in instance._meta.fields:
             if field.name.startswith('visto_'):
                 val = getattr(instance, field.name)
                 if val and isinstance(val, str) and 'drive.google.com' in val:
-                    # Extrai o ID do arquivo do Google Drive da URL
                     match = re.search(r'id=([a-zA-Z0-9_-]+)', val)
                     if match:
                         file_id = match.group(1)
+                        logging.warning(f"Deletando assinatura ID {file_id} do campo {field.name}")
                         if storage is None:
                             from core.gdrive_storage import CustomGoogleDriveStorage
                             storage = CustomGoogleDriveStorage()
                         try:
                             storage.delete(file_id)
                         except Exception as e:
-                            print(f"Erro ao deletar assinatura do Drive: {e}")
+                            logging.error(f"Erro ao deletar assinatura do Drive (Sinal): {e}")
