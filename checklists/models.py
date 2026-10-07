@@ -677,3 +677,26 @@ class ChecklistCarroComercial(models.Model):
     def __str__(self):
         return f"MNT Carro Comercial {self.veiculo.placa} - {self.data_criacao.strftime('%d/%m/%y')}"
 
+# --- Interceptador Global de Assinaturas ---
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+from core.gdrive_storage import process_base64_signature
+
+@receiver(pre_save)
+def intercept_base64_signatures(sender, instance, **kwargs):
+    # Modelos que possuem assinaturas
+    modelos_com_assinatura = [
+        'Checklist', 'MaintenanceTruck', 'MaintenanceTrailer', 
+        'ChecklistForklift', 'ChecklistCarroComercial'
+    ]
+    
+    if sender.__name__ in modelos_com_assinatura:
+        for field in instance._meta.fields:
+            # Todas as assinaturas começam com 'visto_'
+            if field.name.startswith('visto_'):
+                val = getattr(instance, field.name)
+                # Se for uma string base64 recém chegada do frontend
+                if isinstance(val, str) and val.startswith('data:image/'):
+                    # O helper vai subir a imagem pro Google Drive e retornar o link
+                    new_val = process_base64_signature(val, filename_prefix=f"assinatura_{sender.__name__}")
+                    setattr(instance, field.name, new_val)

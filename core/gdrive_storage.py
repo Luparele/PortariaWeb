@@ -101,3 +101,77 @@ class CustomGoogleDriveStorage(Storage):
         
     def size(self, name):
         return 0
+
+def process_base64_signature(base64_str, filename_prefix="assinatura"):
+    """
+    Recebe uma string base64 de imagem, decodifica, faz o upload para
+    uma subpasta 'Assinaturas' no Google Drive e retorna o link de visualização.
+    """
+    if not base64_str or not base64_str.startswith('data:image/'):
+        return base64_str
+
+    import base64
+    import re
+    import uuid
+    from io import BytesIO
+    from googleapiclient.http import MediaIoBaseUpload
+
+    try:
+        storage = CustomGoogleDriveStorage()
+        service = storage.service
+        parent_id = storage.folder_id
+        
+        # Procura se a pasta 'Assinaturas' já existe
+        query = f"name='Assinaturas' and '{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        response = service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
+        files = response.get('files', [])
+        
+        if files:
+            assinaturas_folder_id = files[0].get('id')
+        else:
+            folder_metadata = {
+                'name': 'Assinaturas',
+                'parents': [parent_id],
+                'mimeType': 'application/vnd.google-apps.folder'
+            }
+            folder = service.files().create(body=folder_metadata, fields='id').execute()
+            assinaturas_folder_id = folder.get('id')
+
+        # Extrai os dados base64
+        match = re.match(r'data:image/(?P<format>jpeg|png|gif|webp);base64,(?P<data>.*)', base64_str)
+        if match:
+            ext = match.group('format')
+            b64_data = match.group('data')
+            image_data = base64.b64decode(b64_data)
+            f = BytesIO(image_data)
+            
+            file_name = f"{filename_prefix}_{uuid.uuid4().hex[:8]}.{ext}"
+            
+            # Upload para o Google Drive
+            file_metadata = {
+                'name': file_name,
+                'parents': [assinaturas_folder_id]
+            }
+            media = MediaIoBaseUpload(f, mimetype=f'image/{ext}', resumable=False)
+            
+            uploaded_file = service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+            
+            file_id = uploaded_file.get('id')
+            
+            # Torna público
+            service.permissions().create(
+                fileId=file_id,
+                body={'type': 'anyone', 'role': 'reader'}
+            ).execute()
+            
+            # Retorna o link encurtado
+            return f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
+            
+    except Exception as e:
+        print(f"Erro ao salvar assinatura automática no Drive: {e}")
+        
+    return base64_str
